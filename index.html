@@ -1,0 +1,3672 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>ProjectFlow — מערכת ניהול פרויקטים</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ══════════════════════════════════════════════════════════════
+   PROJECTFLOW — DARK TECH THEME
+   Inspired by the uploaded style: deep dark, neon accents, data-viz
+══════════════════════════════════════════════════════════════ */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        font-size: 16px;
+        scroll-behavior: smooth;
+      }
+      body {
+        background: #0a0a0f;
+        color: #e0e0f0;
+        font-family: "Heebo", sans-serif;
+        direction: rtl;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+      :root {
+        --bg: #0a0a0f;
+        --bg2: #0f0f16;
+        --surface: #131320;
+        --card: #18182a;
+        --card2: #1e1e30;
+        --border: #252538;
+        --border2: #2e2e48;
+
+        --accent: #7b68ff;
+        --accent2: #a594ff;
+        --accent-glow: rgba(123, 104, 255, 0.18);
+        --accent-glow2: rgba(123, 104, 255, 0.08);
+
+        --cyan: #00d4ff;
+        --cyan-glow: rgba(0, 212, 255, 0.12);
+        --green: #00e5a0;
+        --green-glow: rgba(0, 229, 160, 0.12);
+        --gold: #ffcc44;
+        --gold-glow: rgba(255, 204, 68, 0.12);
+        --red: #ff4d6d;
+        --red-glow: rgba(255, 77, 109, 0.12);
+        --pink: #ff6eb4;
+
+        --text: #e0e0f0;
+        --text2: #b0b0cc;
+        --muted: #7070a0;
+        --dim: #404060;
+
+        --r-sm: 8px;
+        --r: 12px;
+        --r-lg: 16px;
+        --r-xl: 22px;
+        --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+        --shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.6);
+        --sidebar-w: 232px;
+        --nav-h: 56px;
+      }
+
+      ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--surface);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border2);
+        border-radius: 2px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--accent);
+      }
+
+      /* ── AMBIENT BACKGROUND GLOW ── */
+      body::before {
+        content: "";
+        position: fixed;
+        top: -300px;
+        right: -200px;
+        width: 700px;
+        height: 700px;
+        background: radial-gradient(
+          circle,
+          rgba(123, 104, 255, 0.07) 0%,
+          transparent 70%
+        );
+        pointer-events: none;
+        z-index: 0;
+      }
+      body::after {
+        content: "";
+        position: fixed;
+        bottom: -300px;
+        left: -200px;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(
+          circle,
+          rgba(0, 212, 255, 0.05) 0%,
+          transparent 70%
+        );
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* ── LOGIN ── */
+      #loginScreen {
+        position: fixed;
+        inset: 0;
+        background: var(--bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+      .login-glow {
+        position: absolute;
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(
+          circle,
+          rgba(123, 104, 255, 0.1),
+          transparent 70%
+        );
+        top: -100px;
+        right: -100px;
+        pointer-events: none;
+      }
+      .login-box {
+        background: var(--card);
+        border: 1px solid var(--border2);
+        border-radius: var(--r-xl);
+        padding: 40px;
+        width: 380px;
+        position: relative;
+        z-index: 1;
+        box-shadow: 0 0 80px rgba(123, 104, 255, 0.08);
+        animation: fadeUp 0.4s ease;
+      }
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .login-logo {
+        text-align: center;
+        margin-bottom: 28px;
+      }
+      .login-logo h1 {
+        font-size: 28px;
+        font-weight: 900;
+        letter-spacing: -1px;
+        background: linear-gradient(
+          135deg,
+          var(--accent2) 0%,
+          var(--cyan) 50%,
+          var(--gold) 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .login-logo p {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 5px;
+        letter-spacing: 0.5px;
+      }
+
+      .guide-toggle {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .guide-toggle button {
+        background: none;
+        border: 1px solid var(--border2);
+        border-radius: 20px;
+        color: var(--muted);
+        font-size: 12px;
+        padding: 4px 14px;
+        cursor: pointer;
+        font-family: "Heebo", sans-serif;
+        transition: all 0.2s;
+      }
+      .guide-toggle button:hover {
+        color: var(--accent2);
+        border-color: var(--accent);
+      }
+
+      .guide-panel {
+        display: none;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 16px;
+        margin-bottom: 18px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .guide-panel.show {
+        display: block;
+      }
+      .guide-section {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--accent2);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin: 12px 0 6px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid var(--border);
+      }
+      .guide-section:first-child {
+        margin-top: 0;
+      }
+      .guide-step {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 7px;
+        font-size: 12px;
+        color: var(--text2);
+      }
+      .guide-num {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--accent-glow);
+        border: 1px solid var(--accent);
+        color: var(--accent2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 700;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+
+      .role-btns {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 22px;
+      }
+      .role-btn {
+        flex: 1;
+        padding: 12px 8px;
+        border-radius: var(--r);
+        cursor: pointer;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 600;
+        border: 1px solid var(--border2);
+        transition: all 0.2s;
+        color: var(--muted);
+        background: transparent;
+        font-family: "Heebo", sans-serif;
+      }
+      .role-btn:hover {
+        border-color: var(--accent);
+        background: var(--accent-glow2);
+      }
+      .role-btn.active {
+        border-color: var(--accent);
+        color: var(--accent2);
+        background: var(--accent-glow);
+      }
+      .role-icon {
+        font-size: 22px;
+        margin-bottom: 5px;
+      }
+
+      .login-err {
+        color: var(--red);
+        font-size: 12px;
+        margin-top: 8px;
+        text-align: center;
+        min-height: 18px;
+      }
+
+      /* ── FORM ELEMENTS ── */
+      .form-group {
+        margin-bottom: 14px;
+      }
+      .form-label {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--muted);
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+      }
+      .form-input,
+      .form-select,
+      .form-textarea {
+        width: 100%;
+        background: var(--surface);
+        border: 1px solid var(--border2);
+        border-radius: var(--r-sm);
+        padding: 10px 12px;
+        font-size: 13px;
+        color: var(--text);
+        font-family: "Heebo", sans-serif;
+        transition: all 0.2s;
+        direction: rtl;
+      }
+      .form-input:focus,
+      .form-select:focus,
+      .form-textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-glow);
+        background: var(--card);
+      }
+      .form-textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+      .form-select option {
+        background: var(--surface);
+      }
+
+      /* ── BUTTONS ── */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 16px;
+        border-radius: var(--r-sm);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        transition: all 0.18s;
+        font-family: "Heebo", sans-serif;
+        white-space: nowrap;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, var(--accent) 0%, #5a4fff 100%);
+        color: #fff;
+        box-shadow: 0 2px 12px rgba(123, 104, 255, 0.3);
+      }
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 20px rgba(123, 104, 255, 0.5);
+      }
+      .btn-ghost {
+        background: transparent;
+        color: var(--text2);
+        border: 1px solid var(--border2);
+      }
+      .btn-ghost:hover {
+        background: var(--accent-glow2);
+        border-color: var(--accent);
+        color: var(--accent2);
+      }
+      .btn-success {
+        background: rgba(0, 229, 160, 0.15);
+        color: var(--green);
+        border: 1px solid rgba(0, 229, 160, 0.3);
+      }
+      .btn-success:hover {
+        background: rgba(0, 229, 160, 0.25);
+      }
+      .btn-danger {
+        background: rgba(255, 77, 109, 0.15);
+        color: var(--red);
+        border: 1px solid rgba(255, 77, 109, 0.3);
+      }
+      .btn-danger:hover {
+        background: rgba(255, 77, 109, 0.25);
+      }
+      .btn-amber {
+        background: rgba(255, 204, 68, 0.15);
+        color: var(--gold);
+        border: 1px solid rgba(255, 204, 68, 0.3);
+      }
+      .btn-sm {
+        padding: 5px 12px;
+        font-size: 12px;
+      }
+      .btn-xs {
+        padding: 3px 9px;
+        font-size: 11px;
+      }
+      .btn-full {
+        width: 100%;
+        justify-content: center;
+      }
+
+      /* ── APP SHELL ── */
+      .app {
+        display: flex;
+        min-height: 100vh;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ── SIDEBAR ── */
+      .sidebar {
+        width: var(--sidebar-w);
+        flex-shrink: 0;
+        background: var(--surface);
+        border-left: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 100;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+      }
+      .sidebar::before {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(
+          circle,
+          rgba(123, 104, 255, 0.06),
+          transparent 70%
+        );
+        pointer-events: none;
+      }
+      .sidebar-logo {
+        padding: 18px 18px 16px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+      .sidebar-logo h1 {
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: -0.5px;
+        background: linear-gradient(135deg, var(--accent2), var(--cyan));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .sidebar-logo p {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .sidebar-logo .live-clock {
+        font-size: 11px;
+        color: var(--dim);
+        margin-top: 6px;
+        font-family: "Space Mono", monospace;
+        letter-spacing: 0.5px;
+      }
+
+      .sidebar-nav {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px 8px;
+      }
+      .nav-section {
+        margin-bottom: 18px;
+      }
+      .nav-label {
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--dim);
+        letter-spacing: 2px;
+        padding: 0 10px 7px;
+        text-transform: uppercase;
+        display: block;
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 10px;
+        border-radius: var(--r-sm);
+        cursor: pointer;
+        transition: all 0.18s;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 1px;
+        user-select: none;
+        position: relative;
+        overflow: hidden;
+      }
+      .nav-item::before {
+        content: "";
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%) scaleY(0);
+        width: 2px;
+        height: 70%;
+        background: var(--accent);
+        border-radius: 2px;
+        transition: transform 0.2s;
+      }
+      .nav-item:hover {
+        background: var(--accent-glow2);
+        color: var(--text);
+      }
+      .nav-item.active {
+        background: var(--accent-glow);
+        color: var(--accent2);
+        font-weight: 600;
+      }
+      .nav-item.active::before {
+        transform: translateY(-50%) scaleY(1);
+      }
+      .nav-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        background: var(--card);
+        flex-shrink: 0;
+        transition: all 0.18s;
+      }
+      .nav-item.active .nav-icon {
+        background: var(--accent-glow);
+        color: var(--accent2);
+      }
+      .nav-badge {
+        margin-right: auto;
+        background: var(--red);
+        color: white;
+        font-size: 9px;
+        font-weight: 800;
+        padding: 1px 5px;
+        border-radius: 10px;
+      }
+
+      .sidebar-user {
+        padding: 12px 14px;
+        border-top: 1px solid var(--border);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .user-avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: linear-gradient(135deg, var(--accent), var(--cyan));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 13px;
+        color: #fff;
+        box-shadow: 0 0 14px rgba(123, 104, 255, 0.3);
+      }
+      .user-info h4 {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .user-info p {
+        font-size: 11px;
+        color: var(--muted);
+        cursor: pointer;
+        transition: color 0.18s;
+      }
+      .user-info p:hover {
+        color: var(--red);
+      }
+
+      /* ── MAIN ── */
+      .main {
+        flex: 1;
+        margin-right: var(--sidebar-w);
+        padding: 28px;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+      .page {
+        display: none;
+        animation: fadeIn 0.25s ease;
+      }
+      .page.active {
+        display: block;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* ── PAGE HEADER ── */
+      .page-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        gap: 12px;
+      }
+      .page-title {
+        font-size: 22px;
+        font-weight: 900;
+        letter-spacing: -0.8px;
+        color: var(--text);
+      }
+      .page-title span {
+        background: linear-gradient(135deg, var(--accent2), var(--cyan));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .page-sub {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 3px;
+      }
+
+      /* ── CARDS ── */
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--r-lg);
+        padding: 18px;
+        position: relative;
+        overflow: hidden;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+      .card:hover {
+        border-color: var(--border2);
+        box-shadow: 0 0 0 1px var(--border2);
+      }
+      .card::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(123, 104, 255, 0.15),
+          transparent
+        );
+        pointer-events: none;
+      }
+      .card-title {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        color: var(--muted);
+        margin-bottom: 14px;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .card-title::before {
+        content: "";
+        width: 14px;
+        height: 2px;
+        background: linear-gradient(90deg, var(--accent), var(--cyan));
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .grid-3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 14px;
+      }
+      .grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+      }
+      .grid-auto {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+        gap: 14px;
+      }
+
+      /* ── STAT CARDS ── */
+      .stat-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--r-lg);
+        padding: 16px 18px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.2s;
+        cursor: default;
+      }
+      .stat-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--border2);
+        box-shadow: var(--shadow);
+      }
+      .stat-card .glow-corner {
+        position: absolute;
+        top: -20px;
+        right: -20px;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        opacity: 0.12;
+        transition: opacity 0.2s;
+      }
+      .stat-card:hover .glow-corner {
+        opacity: 0.2;
+      }
+      .stat-val {
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -1.5px;
+        font-family: "Space Mono", monospace;
+        line-height: 1;
+      }
+      .stat-lbl {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 5px;
+        font-weight: 500;
+      }
+      .stat-delta {
+        font-size: 11px;
+        color: var(--dim);
+        margin-top: 4px;
+      }
+
+      /* ── BADGES ── */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .badge-green {
+        background: var(--green-glow);
+        color: var(--green);
+        border: 1px solid rgba(0, 229, 160, 0.25);
+      }
+      .badge-red {
+        background: var(--red-glow);
+        color: var(--red);
+        border: 1px solid rgba(255, 77, 109, 0.25);
+      }
+      .badge-gold {
+        background: var(--gold-glow);
+        color: var(--gold);
+        border: 1px solid rgba(255, 204, 68, 0.25);
+      }
+      .badge-purple {
+        background: var(--accent-glow);
+        color: var(--accent2);
+        border: 1px solid rgba(123, 104, 255, 0.25);
+      }
+      .badge-cyan {
+        background: var(--cyan-glow);
+        color: var(--cyan);
+        border: 1px solid rgba(0, 212, 255, 0.25);
+      }
+      .badge-muted {
+        background: var(--card2);
+        color: var(--muted);
+        border: 1px solid var(--border);
+      }
+
+      /* ── TABLE ── */
+      .table-wrap {
+        overflow-x: auto;
+        border-radius: var(--r);
+      }
+      table.tbl {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      table.tbl th {
+        text-align: right;
+        padding: 10px 14px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        color: var(--dim);
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+      }
+      table.tbl td {
+        padding: 13px 14px;
+        font-size: 13px;
+        border-bottom: 1px solid rgba(37, 37, 56, 0.6);
+      }
+      table.tbl tbody tr {
+        transition: background 0.15s;
+      }
+      table.tbl tbody tr:hover td {
+        background: var(--accent-glow2);
+      }
+      table.tbl tr:last-child td {
+        border-bottom: none;
+      }
+
+      /* ── MODAL ── */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(5, 5, 10, 0.85);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(8px);
+        padding: 20px;
+      }
+      .modal-overlay.open {
+        display: flex;
+      }
+      .modal {
+        background: var(--card);
+        border: 1px solid var(--border2);
+        border-radius: var(--r-xl);
+        padding: 28px;
+        width: 90%;
+        max-width: 520px;
+        max-height: 88vh;
+        overflow-y: auto;
+        position: relative;
+        box-shadow: var(--shadow-lg);
+        animation: modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .modal-wide {
+        max-width: 700px;
+      }
+      @keyframes modalIn {
+        from {
+          opacity: 0;
+          transform: scale(0.92) translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+      .modal::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(
+          90deg,
+          var(--accent),
+          var(--cyan),
+          var(--gold)
+        );
+        border-radius: var(--r-xl) var(--r-xl) 0 0;
+      }
+      .modal-title {
+        font-size: 17px;
+        font-weight: 800;
+        margin-bottom: 20px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+        letter-spacing: -0.3px;
+      }
+      .modal-close {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-sm);
+        padding: 5px 9px;
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 14px;
+        transition: all 0.18s;
+      }
+      .modal-close:hover {
+        color: var(--red);
+        border-color: var(--red);
+        background: var(--red-glow);
+      }
+      .modal-footer {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+      }
+
+      /* ── TABS ── */
+      .tabs {
+        display: flex;
+        gap: 2px;
+        background: var(--surface);
+        padding: 3px;
+        border-radius: var(--r-sm);
+        margin-bottom: 18px;
+        border: 1px solid var(--border);
+      }
+      .tab {
+        flex: 1;
+        padding: 7px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.18s;
+        color: var(--muted);
+        font-family: "Heebo", sans-serif;
+        border: none;
+        background: none;
+      }
+      .tab.active {
+        background: var(--card);
+        color: var(--text);
+        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+      }
+      .tab:hover:not(.active) {
+        color: var(--text);
+      }
+
+      /* ── WEEK PILLS ── */
+      .week-pills {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+      .week-pill {
+        padding: 5px 13px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.18s;
+        border: 1px solid var(--border2);
+        color: var(--muted);
+        background: transparent;
+        font-family: "Heebo", sans-serif;
+      }
+      .week-pill:hover:not(.active) {
+        border-color: var(--accent);
+        color: var(--accent2);
+        background: var(--accent-glow2);
+      }
+      .week-pill.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+        box-shadow: 0 0 12px rgba(123, 104, 255, 0.4);
+      }
+      .week-pill.locked {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .week-pill.locked::after {
+        content: " 🔒";
+        font-size: 9px;
+      }
+
+      /* ── INSTITUTION FILTER CHIPS ── */
+      .inst-filter {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+      }
+      .inst-chip {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid var(--border2);
+        color: var(--muted);
+        background: transparent;
+        transition: all 0.18s;
+        font-family: "Heebo", sans-serif;
+      }
+      .inst-chip:hover {
+        border-color: var(--accent);
+        color: var(--accent2);
+        background: var(--accent-glow2);
+      }
+      .inst-chip.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+        box-shadow: 0 0 10px rgba(123, 104, 255, 0.3);
+      }
+
+      /* ── GRADE RING ── */
+      .ring-wrap {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .ring-wrap svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        transform: rotate(-90deg);
+      }
+      .ring-val {
+        font-family: "Space Mono", monospace;
+        font-weight: 800;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ── DAY ROW ── */
+      .day-row {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 13px 15px;
+        margin-bottom: 9px;
+        transition: border-color 0.2s;
+      }
+      .day-row:hover {
+        border-color: var(--border2);
+      }
+      .day-row-hd {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 9px;
+      }
+      .day-name {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--accent2);
+        font-family: "Space Mono", monospace;
+      }
+      .grade-inp {
+        width: 60px;
+        background: var(--card);
+        border: 1px solid var(--border2);
+        border-radius: var(--r-sm);
+        padding: 5px 8px;
+        font-size: 15px;
+        font-weight: 700;
+        font-family: "Space Mono", monospace;
+        color: var(--text);
+        text-align: center;
+        transition: all 0.18s;
+      }
+      .grade-inp:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-glow);
+      }
+
+      /* ── STUDENT CARD ── */
+      .student-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--r-lg);
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+        overflow: hidden;
+      }
+      .student-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 3px;
+        border-radius: 0 var(--r-lg) var(--r-lg) 0;
+      }
+      .student-card.approved::before {
+        background: var(--green);
+        box-shadow: 0 0 10px var(--green);
+      }
+      .student-card.pending::before {
+        background: var(--red);
+        box-shadow: 0 0 10px var(--red);
+      }
+      .student-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(123, 104, 255, 0.15);
+      }
+      .sc-name {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 2px;
+        color: var(--text);
+      }
+      .sc-inst {
+        font-size: 11px;
+        color: var(--cyan);
+        margin-bottom: 2px;
+        font-weight: 600;
+      }
+      .sc-topic {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 12px;
+      }
+      .sc-stats {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 10px;
+      }
+      .sc-s {
+        text-align: center;
+      }
+      .sc-sv {
+        font-size: 20px;
+        font-weight: 800;
+        font-family: "Space Mono", monospace;
+        line-height: 1;
+      }
+      .sc-sl {
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      /* ── TASKS WIDGET ── */
+      .tasks-widget {
+        background: linear-gradient(
+          135deg,
+          rgba(123, 104, 255, 0.15) 0%,
+          rgba(0, 212, 255, 0.08) 100%
+        );
+        border: 1px solid rgba(123, 104, 255, 0.3);
+        border-radius: var(--r-xl);
+        padding: 20px;
+        margin-bottom: 22px;
+        position: relative;
+        overflow: hidden;
+      }
+      .tasks-widget::before {
+        content: "TASKS";
+        position: absolute;
+        top: 8px;
+        left: 16px;
+        font-size: 60px;
+        font-weight: 900;
+        color: rgba(123, 104, 255, 0.05);
+        font-family: "Space Mono", monospace;
+        pointer-events: none;
+        letter-spacing: -2px;
+      }
+      .tasks-widget-title {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--accent2);
+        margin-bottom: 4px;
+      }
+      .tasks-widget-head {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 14px;
+      }
+      .task-list {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .task-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(123, 104, 255, 0.15);
+        border-radius: var(--r-sm);
+        padding: 10px 12px;
+        font-size: 13px;
+        backdrop-filter: blur(4px);
+      }
+      .task-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--accent2);
+        flex-shrink: 0;
+        margin-top: 6px;
+      }
+
+      /* ── SCORE ROW ── */
+      .score-row {
+        display: flex;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(37, 37, 56, 0.5);
+      }
+      .score-row:last-child {
+        border-bottom: none;
+      }
+      .score-bar-wrap {
+        flex: 1;
+        margin: 0 12px;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .score-bar-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 0.6s ease;
+      }
+
+      /* ── DIVIDER ── */
+      .divider {
+        height: 1px;
+        background: var(--border);
+        margin: 14px 0;
+      }
+      .divider-gradient {
+        height: 1px;
+        margin: 16px 0;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--accent),
+          transparent
+        );
+        opacity: 0.2;
+      }
+
+      /* ── HISTORY WEEK ── */
+      .history-week {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-lg);
+        padding: 16px;
+        margin-bottom: 10px;
+        transition: border-color 0.2s;
+      }
+      .history-week:hover {
+        border-color: var(--border2);
+      }
+      .history-week-hd {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+      }
+      .history-week-hd.expanded {
+        margin-bottom: 14px;
+      }
+      .history-week-body {
+        display: none;
+      }
+      .history-week-body.show {
+        display: block;
+        animation: fadeIn 0.2s ease;
+      }
+
+      /* ── CONFIG BANNER ── */
+      .info-banner {
+        background: linear-gradient(
+          135deg,
+          rgba(123, 104, 255, 0.12),
+          rgba(0, 212, 255, 0.06)
+        );
+        border: 1px solid rgba(123, 104, 255, 0.25);
+        border-radius: var(--r);
+        padding: 12px 16px;
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        color: var(--text2);
+      }
+
+      /* ── SUBMISSION CARD ── */
+      .sub-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        overflow: hidden;
+        margin-bottom: 12px;
+      }
+      .sub-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+      }
+      .sub-card-title {
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .sub-card-body {
+        padding: 14px 16px;
+      }
+
+      /* ── LOCKED OVERLAY ── */
+      .locked-overlay {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 10, 15, 0.75);
+        border-radius: var(--r-lg);
+        z-index: 10;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 8px;
+        backdrop-filter: blur(3px);
+      }
+      .locked-overlay.show {
+        display: flex;
+      }
+      .locked-icon {
+        font-size: 28px;
+      }
+      .locked-txt {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      /* ── QUICK ACCESS ── */
+      .qa-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .qa-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--r-lg);
+        padding: 18px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+        overflow: hidden;
+      }
+      .qa-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        background: linear-gradient(
+          135deg,
+          var(--accent-glow),
+          var(--cyan-glow)
+        );
+        transition: opacity 0.2s;
+      }
+      .qa-card:hover::before {
+        opacity: 1;
+      }
+      .qa-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(123, 104, 255, 0.15);
+      }
+      .qa-icon {
+        font-size: 28px;
+        margin-bottom: 8px;
+        position: relative;
+        z-index: 1;
+      }
+      .qa-label {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text);
+        position: relative;
+        z-index: 1;
+      }
+      .qa-sub {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ── LOADING ── */
+      .loading-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 10, 15, 0.85);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 500;
+        flex-direction: column;
+        gap: 14px;
+        backdrop-filter: blur(4px);
+      }
+      .loading-overlay.show {
+        display: flex;
+      }
+      .loading-txt {
+        font-size: 13px;
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .spinner {
+        width: 38px;
+        height: 38px;
+        border: 2px solid var(--border2);
+        border-top: 2px solid var(--accent);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* ── TOAST ── */
+      .toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(80px);
+        background: var(--card2);
+        border: 1px solid var(--border2);
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-size: 13px;
+        font-weight: 600;
+        z-index: 9998;
+        transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        white-space: nowrap;
+      }
+      .toast.show {
+        transform: translateX(-50%) translateY(0);
+      }
+      .toast.success {
+        border-color: var(--green);
+        color: var(--green);
+      }
+      .toast.error {
+        border-color: var(--red);
+        color: var(--red);
+      }
+      .toast.warning {
+        border-color: var(--gold);
+        color: var(--gold);
+      }
+
+      /* ── MOBILE ── */
+      .mobile-btn {
+        display: none;
+        position: fixed;
+        top: 14px;
+        right: 14px;
+        z-index: 200;
+        background: var(--card);
+        border: 1px solid var(--border2);
+        border-radius: var(--r-sm);
+        padding: 8px 10px;
+        cursor: pointer;
+        font-size: 18px;
+        color: var(--text);
+      }
+      @media (max-width: 900px) {
+        .sidebar {
+          transform: translateX(232px);
+        }
+        .sidebar.open {
+          transform: translateX(0);
+        }
+        .main {
+          margin-right: 0;
+          padding: 16px;
+        }
+        .mobile-btn {
+          display: block;
+        }
+        .grid-4,
+        .grid-3 {
+          grid-template-columns: 1fr 1fr;
+        }
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+        .qa-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 600px) {
+        .grid-4 {
+          grid-template-columns: 1fr 1fr;
+        }
+        .grid-3 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* ── MISC ── */
+      .text-accent {
+        color: var(--accent2);
+      }
+      .text-green {
+        color: var(--green);
+      }
+      .text-red {
+        color: var(--red);
+      }
+      .text-gold {
+        color: var(--gold);
+      }
+      .text-cyan {
+        color: var(--cyan);
+      }
+      .text-muted {
+        color: var(--muted);
+      }
+      .text-dim {
+        color: var(--dim);
+      }
+      .font-mono {
+        font-family: "Space Mono", monospace;
+      }
+      .mb-8 {
+        margin-bottom: 8px;
+      }
+      .mb-14 {
+        margin-bottom: 14px;
+      }
+      .mb-18 {
+        margin-bottom: 18px;
+      }
+      .mb-24 {
+        margin-bottom: 24px;
+      }
+      .mt-8 {
+        margin-top: 8px;
+      }
+      .mt-14 {
+        margin-top: 14px;
+      }
+      .mt-18 {
+        margin-top: 18px;
+      }
+      .gap-8 {
+        gap: 8px;
+      }
+      .gap-12 {
+        gap: 12px;
+      }
+      .flex {
+        display: flex;
+        align-items: center;
+      }
+      .flex-between {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .relative {
+        position: relative;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- LOADING -->
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="spinner"></div>
+      <div class="loading-txt" id="loadingTxt">טוען...</div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <!-- MOBILE BTN -->
+    <button class="mobile-btn" onclick="toggleSidebar()">☰</button>
+
+    <!-- ═══════════════════ LOGIN SCREEN ═══════════════════ -->
+    <div id="loginScreen">
+      <div
+        style="
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          pointer-events: none;
+        "
+      >
+        <div
+          style="
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(
+              circle,
+              rgba(123, 104, 255, 0.08),
+              transparent 70%
+            );
+            top: -200px;
+            right: -100px;
+          "
+        ></div>
+        <div
+          style="
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(
+              circle,
+              rgba(0, 212, 255, 0.06),
+              transparent 70%
+            );
+            bottom: -200px;
+            left: -100px;
+          "
+        ></div>
+      </div>
+      <div class="login-box">
+        <div class="login-logo">
+          <h1>ProjectFlow</h1>
+          <p>מערכת ניהול פרויקטים לתלמידות</p>
+        </div>
+
+        <!-- Guide toggle -->
+        <div class="guide-toggle">
+          <button onclick="toggleGuide()">📖 מדריך לתלמידה ←</button>
+        </div>
+        <div class="guide-panel" id="guidePanel">
+          <div class="guide-section">כניסה למערכת</div>
+          <div class="guide-step">
+            <div class="guide-num">1</div>
+            <span>קבלי שם משתמש וסיסמה מהמורה</span>
+          </div>
+          <div class="guide-step">
+            <div class="guide-num">2</div>
+            <span>הכניסי את הפרטים בלשונית "תלמידה" ולחצי כניסה</span>
+          </div>
+          <div class="guide-section">משוב יומי — כל יום עד חצות!</div>
+          <div class="guide-step">
+            <div class="guide-num">1</div>
+            <span>גשי ליומן יומי ומלאי: מה עשיתי, נקודות ציון, שאלות</span>
+          </div>
+          <div class="guide-step">
+            <div class="guide-num">2</div>
+            <span>אחרי חצות ← ציון אוטומטי 0 ביום שלא דווח</span>
+          </div>
+          <div class="guide-section">תיק פרויקט — יומיים אחרי הנחיה</div>
+          <div class="guide-step">
+            <div class="guide-num">1</div>
+            <span>הגישי WORD/PDF ב-Drive — שתפי לצפייה לכולם</span>
+          </div>
+          <div class="guide-step">
+            <div class="guide-num">2</div>
+            <span>הדביקי קישור בתיק פרויקט ולחצי הגשה</span>
+          </div>
+          <div class="guide-step">
+            <div class="guide-num">✦</div>
+            <span
+              >נדרש: הגדרה אלגוריתמית | רקע תאורטי | טכנולוגיות | תרשים |
+              נספחים</span
+            >
+          </div>
+          <div class="guide-section">תיעוד ביצוע — 5 ימים אחרי הנחיה</div>
+          <div class="guide-step">
+            <div class="guide-num">1</div>
+            <span>תעדי ביצוע פרויקט + העלי Drive + שתפי</span>
+          </div>
+          <div class="guide-section">חישוב ציון שבועי</div>
+          <div class="guide-step">
+            <div class="guide-num">✦</div>
+            <span><b>50%</b> בחינה ביום הנחיה</span>
+          </div>
+          <div class="guide-step">
+            <div class="guide-num">✦</div>
+            <span><b>50%</b> שבוע קודם: 30% עבודה + 30% תיק + 40% ביצוע</span>
+          </div>
+          <div class="guide-step">
+            <div class="guide-num">✦</div>
+            <span>ציון ≥ 70 = מאושרת להנחיה</span>
+          </div>
+        </div>
+
+        <!-- Role buttons -->
+        <div class="role-btns">
+          <button
+            class="role-btn"
+            onclick="setRole('teacher')"
+            id="roleTeacher"
+          >
+            <div class="role-icon">👩‍🏫</div>
+            מורה
+          </button>
+          <button
+            class="role-btn active"
+            onclick="setRole('student')"
+            id="roleStudent"
+          >
+            <div class="role-icon">👩‍💻</div>
+            תלמידה
+          </button>
+        </div>
+
+        <!-- <div class="form-group">
+      <label class="form-label">כתובת Apps Script</label>
+      <input class="form-input" id="sheetUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+    </div> -->
+        <div class="form-group">
+          <label class="form-label">שם משתמש</label>
+          <input
+            class="form-input"
+            id="loginUser"
+            placeholder="הכניסי שם משתמש"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label">סיסמה</label>
+          <input
+            class="form-input"
+            type="password"
+            id="loginPass"
+            placeholder="הכניסי סיסמה"
+            onkeydown="if (event.key === 'Enter') doLogin();"
+          />
+        </div>
+        <button class="btn btn-primary btn-full" onclick="doLogin()">
+          כניסה למערכת ←
+        </button>
+        <div class="login-err" id="loginErr"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════ APP ═══════════════════ -->
+    <div class="app" id="mainApp" style="display: none">
+      <!-- SIDEBAR -->
+      <div class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+          <h1>ProjectFlow</h1>
+          <p>מערכת ניהול פרויקטים</p>
+          <div class="live-clock" id="liveClock">טוען...</div>
+        </div>
+        <div class="sidebar-nav" id="sidebarNav"></div>
+        <div class="sidebar-user">
+          <div class="user-avatar" id="userAvatar">?</div>
+          <div class="user-info">
+            <h4 id="userDisplayName">—</h4>
+            <p onclick="logout()">↩ התנתקות</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN -->
+      <div class="main" id="mainContent">
+        <!-- ────────────── TEACHER PAGES ────────────── -->
+
+        <!-- DASHBOARD -->
+        <div class="page" id="page-dashboard">
+          <div class="page-header">
+            <div>
+              <h2 class="page-title">לוח <span>בקרה</span></h2>
+              <p class="page-sub" id="dashDate">—</p>
+            </div>
+            <button
+              class="btn btn-ghost btn-sm"
+              onclick="loadData().then(() => renderPage('dashboard'))"
+            >
+              ↻ רענן
+            </button>
+          </div>
+
+          <!-- Quick access -->
+          <div class="qa-grid">
+            <div class="qa-card" onclick="navigateTo('submissions')">
+              <div class="qa-icon">📁</div>
+              <div class="qa-label">תיקי פרויקט</div>
+              <div class="qa-sub">הגשות לבדיקה וציון</div>
+            </div>
+            <div class="qa-card" onclick="navigateTo('grades')">
+              <div class="qa-icon">📝</div>
+              <div class="qa-label">ציונים ומשוב</div>
+              <div class="qa-sub">יומן יומי ומשוב</div>
+            </div>
+            <div class="qa-card" onclick="navigateTo('students')">
+              <div class="qa-icon">👩‍💻</div>
+              <div class="qa-label">תלמידות</div>
+              <div class="qa-sub">ניהול וסינון</div>
+            </div>
+          </div>
+
+          <div class="grid-4 mb-18" id="dashStats"></div>
+          <div class="grid-2 mb-18">
+            <div class="card">
+              <div class="card-title">ביצועים שבועיים — ממוצע</div>
+              <canvas id="chartWeekly" height="160"></canvas>
+            </div>
+            <div class="card">
+              <div class="card-title">פילוג ציוני שבוע אחרון</div>
+              <canvas id="chartDist" height="160"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">סטטוס תלמידות — שבוע נוכחי</div>
+            <!-- Institution filter for dashboard table -->
+            <div class="inst-filter" id="dashInstFilter"></div>
+            <div class="table-wrap">
+              <table class="tbl" id="dashTable"></table>
+            </div>
+          </div>
+        </div>
+
+        <!-- STUDENTS -->
+        <div class="page" id="page-students">
+          <div class="page-header">
+            <div>
+              <h2 class="page-title">ניהול <span>תלמידות</span></h2>
+              <p class="page-sub" id="studentsSubtitle">—</p>
+            </div>
+            <button
+              class="btn btn-primary"
+              onclick="openModal('addStudentModal')"
+            >
+              + תלמידה חדשה
+            </button>
+          </div>
+          <!-- Institution filter -->
+          <div class="inst-filter" id="studentsInstFilter"></div>
+          <div class="grid-auto" id="studentsGrid"></div>
+        </div>
+
+        <!-- GRADES / DETAIL -->
+        <div class="page" id="page-grades">
+          <div id="gradesListView">
+            <div class="page-header">
+              <div>
+                <h2 class="page-title">ציונים <span>ומשוב</span></h2>
+                <p class="page-sub">עריכת ציונים ומשוב לכל תלמידה</p>
+              </div>
+            </div>
+            <!-- Institution filter -->
+            <div class="inst-filter" id="gradesInstFilter"></div>
+            <div class="card">
+              <div class="table-wrap">
+                <table class="tbl" id="gradesTable"></table>
+              </div>
+            </div>
+          </div>
+          <div id="studentDetailView" style="display: none"></div>
+        </div>
+
+        <!-- SUBMISSIONS -->
+        <div class="page" id="page-submissions">
+          <div class="page-header">
+            <div>
+              <h2 class="page-title">מעקב <span>הגשות</span></h2>
+              <p class="page-sub">תיקי פרויקט ותיעודי ביצוע</p>
+            </div>
+          </div>
+          <div id="submissionsContent"></div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div class="page" id="page-settings">
+          <div class="page-header">
+            <div>
+              <h2 class="page-title"><span>הגדרות</span> מערכת</h2>
+            </div>
+          </div>
+          <div class="grid-2 mb-14">
+            <div class="card">
+              <div class="card-title">משקלות ציון שבועי</div>
+              <div class="score-row">
+                <span style="font-size: 13px; color: var(--text2)"
+                  >עבודה יומית</span
+                ><span class="badge badge-purple font-mono">30%</span>
+              </div>
+              <div class="score-row">
+                <span style="font-size: 13px; color: var(--text2)"
+                  >תיק פרויקט</span
+                ><span class="badge badge-purple font-mono">30%</span>
+              </div>
+              <div class="score-row">
+                <span style="font-size: 13px; color: var(--text2)"
+                  >תיעוד ביצוע</span
+                ><span class="badge badge-purple font-mono">40%</span>
+              </div>
+              <div class="score-row">
+                <span style="font-size: 13px; color: var(--text2)"
+                  >בחינה ביום הנחיה</span
+                ><span class="badge badge-cyan font-mono">50%</span>
+              </div>
+              <div class="score-row">
+                <span style="font-size: 13px; color: var(--text2)"
+                  >סף אישור הנחיה</span
+                ><span class="badge badge-green">≥ 70</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">לוח זמנים הגשות</div>
+              <div class="score-row">
+                <span style="font-size: 13px; color: var(--text2)"
+                  >תיק פרויקט</span
+                ><span style="font-size: 13px; color: var(--gold)"
+                  >יומיים לאחר הנחיה</span
+                >
+              </div>
+              <div class="score-row">
+                <span style="font-size: 13px; color: var(--text2)"
+                  >תיעוד ביצוע</span
+                ><span style="font-size: 13px; color: var(--gold)"
+                  >5 ימים לאחר הנחיה</span
+                >
+              </div>
+              <div class="score-row">
+                <span style="font-size: 13px; color: var(--text2)"
+                  >יומן יומי</span
+                ><span style="font-size: 13px; color: var(--green)"
+                  >כל יום עד חצות</span
+                >
+              </div>
+              <div class="score-row">
+                <span style="font-size: 13px; color: var(--text2)"
+                  >נעילת שבוע</span
+                ><span style="font-size: 13px; color: var(--red)"
+                  >אוטומטי ←מוצ"ש</span
+                >
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">עדכון ימי הנחיה</div>
+            <div class="table-wrap">
+              <table class="tbl" id="settingsTable"></table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ────────────── STUDENT PAGES ────────────── -->
+
+        <!-- MY DASHBOARD -->
+        <div class="page" id="page-my-dashboard">
+          <div id="studentDashContent"></div>
+        </div>
+
+        <!-- DAILY LOG -->
+        <div class="page" id="page-daily-log">
+          <div class="page-header">
+            <div>
+              <h2 class="page-title">יומן <span>יומי</span></h2>
+              <p class="page-sub" id="dailyLogSub">—</p>
+            </div>
+            <div style="display: flex; gap: 6px; align-items: center">
+              <span class="badge badge-red" style="font-size: 11px"
+                >⚠️ עד חצות — אחרת ציון 0</span
+              >
+            </div>
+          </div>
+          <div id="dailyLogContent"></div>
+        </div>
+
+        <!-- MY SUBMISSIONS -->
+        <div class="page" id="page-my-submissions">
+          <div class="page-header">
+            <div>
+              <h2 class="page-title">ההגשות <span>שלי</span></h2>
+            </div>
+          </div>
+          <div id="mySubmissionsContent"></div>
+        </div>
+
+        <!-- HISTORY -->
+        <div class="page" id="page-history">
+          <div class="page-header">
+            <div>
+              <h2 class="page-title">היסטוריה <span>שבועית</span></h2>
+              <p class="page-sub">כל שבועות הפרויקט שלך</p>
+            </div>
+          </div>
+          <div id="historyContent"></div>
+        </div>
+      </div>
+      <!-- /main -->
+    </div>
+    <!-- /app -->
+
+    <!-- ═══════════════════ MODALS ═══════════════════ -->
+
+    <!-- Add Student -->
+    <div class="modal-overlay" id="addStudentModal">
+      <div class="modal">
+        <button class="modal-close" onclick="closeModal('addStudentModal')">
+          ✕
+        </button>
+        <h3 class="modal-title">➕ הוספת תלמידה חדשה</h3>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">שם פרטי *</label
+            ><input class="form-input" id="ns_first" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">שם משפחה *</label
+            ><input class="form-input" id="ns_last" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">שם משתמש *</label
+            ><input class="form-input" id="ns_user" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">סיסמה *</label
+            ><input class="form-input" id="ns_pass" type="password" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">תעודת זהות</label
+            ><input class="form-input" id="ns_id" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">מוסד לימודים *</label
+            ><input
+              class="form-input"
+              id="ns_inst"
+              list="instDatalist"
+              placeholder="שם המוסד"
+            /><datalist id="instDatalist"></datalist>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">נושא הפרויקט</label
+          ><input class="form-input" id="ns_topic" />
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">יום הנחיה</label>
+            <select class="form-select" id="ns_day">
+              <option value="0">ראשון</option>
+              <option value="1">שני</option>
+              <option value="2">שלישי</option>
+              <option value="3">רביעי</option>
+              <option value="4">חמישי</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">שנת לימודים</label
+            ><input class="form-input" id="ns_year" placeholder="תשפ״ה" />
+          </div>
+        </div>
+        <button
+          class="btn btn-primary btn-full mt-8"
+          onclick="submitAddStudent()"
+        >
+          הוספה למערכת ←
+        </button>
+      </div>
+    </div>
+
+    <!-- Grade Modal -->
+    <div class="modal-overlay" id="gradeModal">
+      <div class="modal modal-wide">
+        <button class="modal-close" onclick="closeModal('gradeModal')">
+          ✕
+        </button>
+        <h3 class="modal-title" id="gradeModalTitle">עריכת ציון</h3>
+        <div id="gradeModalContent"></div>
+      </div>
+    </div>
+
+    <!-- Tasks Modal -->
+    <div class="modal-overlay" id="tasksModal">
+      <div class="modal">
+        <button class="modal-close" onclick="closeModal('tasksModal')">
+          ✕
+        </button>
+        <h3 class="modal-title">📋 משימות לשבוע הקרוב</h3>
+        <div class="info-banner mb-14">
+          💡 המשימות יוצגו על מסך הבית של התלמידה ולא ישתנו עד ההנחיה הבאה
+        </div>
+        <div class="form-group">
+          <label class="form-label">משימות (שורה = משימה)</label>
+          <textarea
+            class="form-textarea"
+            id="tasksInput"
+            style="min-height: 160px"
+            placeholder="השלמת מודול ראשון&#10;כתיבת פסאודו קוד&#10;הכנת מצגת ביניים"
+          ></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="closeModal('tasksModal')">
+            ביטול
+          </button>
+          <button class="btn btn-primary" onclick="saveTasks()">שמירה ←</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guidance Day Modal -->
+    <div class="modal-overlay" id="guidanceModal">
+      <div class="modal">
+        <button class="modal-close" onclick="closeModal('guidanceModal')">
+          ✕
+        </button>
+        <h3 class="modal-title">📅 שינוי יום הנחיה</h3>
+        <div class="form-group">
+          <label class="form-label">יום הנחיה חדש</label>
+          <select class="form-select" id="gd_day">
+            <option value="0">ראשון</option>
+            <option value="1">שני</option>
+            <option value="2">שלישי</option>
+            <option value="3">רביעי</option>
+            <option value="4">חמישי</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="closeModal('guidanceModal')">
+            ביטול
+          </button>
+          <button class="btn btn-primary" onclick="saveGuidanceDay()">
+            עדכון
+          </button>
+        </div>
+      </div>
+    </div>
+    <script>
+      // ═══════════════════════════════════════════════════════
+      //  CONFIG & STATE
+      // ═══════════════════════════════════════════════════════
+      const SCRIPT_URL =
+        "https://script.google.com/macros/s/AKfycbxCu2y04mlMHo-_pmtVr8HeALWsylmH9p9IA5CDEOWd4PlI3JtwmQKSxkD6ybt8CkU/exec";
+      const DAYS_HEB = [
+        "ראשון",
+        "שני",
+        "שלישי",
+        "רביעי",
+        "חמישי",
+        "שישי",
+        "שבת",
+      ];
+      let currentUser = null,
+        studentsData = [],
+        currentStudentDetail = null;
+      let loginRole = "student",
+        _tasksCtx = null,
+        _gdCtx = null;
+
+      // ── utils ──
+      function showLoading(t = "טוען...") {
+        $("loadingTxt").textContent = t;
+        $("loadingOverlay").classList.add("show");
+      }
+      function hideLoading() {
+        $("loadingOverlay").classList.remove("show");
+      }
+      function toast(msg, type = "success") {
+        const t = $("toast");
+        t.textContent = msg;
+        t.className = `toast ${type} show`;
+        setTimeout(() => t.classList.remove("show"), 3200);
+      }
+      function openModal(id) {
+        $(id).classList.add("open");
+      }
+      function closeModal(id) {
+        $(id).classList.remove("open");
+      }
+      function $(id) {
+        return document.getElementById(id);
+      }
+      function toggleSidebar() {
+        $("sidebar").classList.toggle("open");
+      }
+      function toggleGuide() {
+        $("guidePanel").classList.toggle("show");
+      }
+
+      function gradeColor(v) {
+        if (v == null || v === "") return "var(--muted)";
+        v = +v;
+        return v >= 80
+          ? "var(--green)"
+          : v >= 60
+            ? "var(--gold)"
+            : "var(--red)";
+      }
+      function calcWeeklyScore(w) {
+        if (!w) return null;
+        const gr =
+          w.dailyLogs?.filter((d) => d.grade != null && d.grade !== "") || [];
+        const da = gr.length
+          ? (gr.reduce((s, d) => s + +d.grade, 0) / gr.length) * 10
+          : 0;
+        return Math.round(
+          da * 0.3 + (+w.portfolioGrade || 0) * 0.3 + (+w.docGrade || 0) * 0.4,
+        );
+      }
+      function scoreRingHTML(val, max, color, size) {
+        if (val == null || val === "")
+          return `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-family:'Space Mono',monospace">—</div>`;
+        const r = (size - 8) / 2,
+          circ = 2 * Math.PI * r,
+          pct = Math.min(+val / max, 1);
+        return `<div class="ring-wrap" style="width:${size}px;height:${size}px">
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--border2)" stroke-width="5"/>
+      <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${color}" stroke-width="5"
+        stroke-dasharray="${circ}" stroke-dashoffset="${circ * (1 - pct)}" stroke-linecap="round"
+        style="filter:drop-shadow(0 0 4px ${color})"/>
+    </svg>
+    <span class="ring-val" style="color:${color};font-size:${Math.round(size * 0.24)}px">${Math.round(+val)}</span>
+  </div>`;
+      }
+      function getGreeting() {
+        const h = new Date().getHours();
+        return h < 12
+          ? "בוקר טוב"
+          : h < 17
+            ? "צהריים טובים"
+            : h < 21
+              ? "ערב טוב"
+              : "לילה טוב";
+      }
+      function updateClock() {
+        const now = new Date(),
+          el = $("liveClock");
+        if (el)
+          el.textContent = `${DAYS_HEB[now.getDay()]} | ${now.toLocaleDateString("he-IL")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      }
+      setInterval(updateClock, 30000);
+
+      // ── Institution filter ──
+      function getAllInstitutions() {
+        const set = new Set(
+          studentsData.map((s) => s.institution || "ללא מוסד"),
+        );
+        return ["הכל", ...set];
+      }
+      function buildInstFilter(cid, cb) {
+        const el = $(cid);
+        if (!el) return;
+        el.innerHTML = getAllInstitutions()
+          .map(
+            (i) =>
+              `<button class="inst-chip ${i === "הכל" ? "active" : ""}" onclick="selectInst(this,'${cid}','${i.replace(/'/g, "\\'")}')">${i}</button>`,
+          )
+          .join("");
+        el._cb = cb;
+      }
+      function selectInst(chip, cid, inst) {
+        $(cid)
+          .querySelectorAll(".inst-chip")
+          .forEach((c) => c.classList.remove("active"));
+        chip.classList.add("active");
+        const cb = $(cid)._cb;
+        if (cb) cb(inst === "הכל" ? null : inst);
+      }
+      function filterByInst(inst) {
+        return inst
+          ? studentsData.filter((s) => (s.institution || "ללא מוסד") === inst)
+          : studentsData;
+      }
+      function updateInstDatalist() {
+        const dl = $("instDatalist");
+        if (!dl) return;
+        const insts = new Set(
+          studentsData.map((s) => s.institution || "").filter(Boolean),
+        );
+        dl.innerHTML = [...insts].map((i) => `<option value="${i}">`).join("");
+      }
+
+      // ── API ──
+      async function apiCall(action, params = {}) {
+        if (!SCRIPT_URL) throw new Error("אין כתובת URL");
+        const r = await fetch(
+          SCRIPT_URL + "?" + new URLSearchParams({ action, ...params }),
+        );
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        return d;
+      }
+      async function apiPost(action, payload = {}) {
+        if (!SCRIPT_URL) throw new Error("אין URL");
+        const fd = new FormData();
+        fd.append("action", action);
+        Object.entries(payload).forEach(([k, v]) =>
+          fd.append(k, typeof v === "object" ? JSON.stringify(v) : v),
+        );
+        const r = await fetch(SCRIPT_URL, { method: "POST", body: fd });
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        return d;
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  AUTH
+      // ══════════════════════════════════════════════════════
+      function setRole(role) {
+        loginRole = role;
+        document
+          .querySelectorAll(".role-btn")
+          .forEach((b) => b.classList.remove("active"));
+        $(role === "teacher" ? "roleTeacher" : "roleStudent").classList.add(
+          "active",
+        );
+      }
+      async function doLogin() {
+        const url=SCRIPT_URL,user=$('loginUser').value.trim(),pass=$('loginPass').value.trim();
+        const err = $("loginErr");
+        err.textContent = "";
+        // if(!url){err.textContent='נא להזין כתובת Apps Script';return}
+        if (!user || !pass) {
+          err.textContent = "נא למלא שם משתמש וסיסמה";
+          return;
+        }
+        // SCRIPT_URL=url;localStorage.setItem('pf_url',url);
+        showLoading("מתחבר...");
+        try {
+          const res = await apiCall("login", {
+            username: user,
+            password: pass,
+            role: loginRole,
+          });
+          if (!res.success) {
+            err.textContent = "שם משתמש או סיסמה שגויים";
+            hideLoading();
+            return;
+          }
+          currentUser = {
+            role: loginRole,
+            username: user,
+            displayName: res.displayName || user,
+            studentSheet: res.studentSheet || null,
+            institution: res.institution || "",
+          };
+          localStorage.setItem(
+            "pf_session",
+            JSON.stringify({ ...currentUser, url }),
+          );
+          await initApp();
+        } catch (e) {
+          err.textContent = "שגיאת חיבור: " + e.message;
+        } finally {
+          hideLoading();
+        }
+      }
+      function logout() {
+        currentUser = null;
+        studentsData = [];
+        localStorage.removeItem("pf_session");
+        $("mainApp").style.display = "none";
+        $("loginScreen").style.display = "flex";
+        $("loginUser").value = "";
+        $("loginPass").value = "";
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  APP INIT
+      // ══════════════════════════════════════════════════════
+      async function initApp() {
+        $("loginScreen").style.display = "none";
+        $("mainApp").style.display = "flex";
+        $("userDisplayName").textContent = currentUser.displayName;
+        $("userAvatar").textContent = currentUser.displayName.slice(0, 2);
+        updateClock();
+        buildSidebar();
+        showLoading("טוען נתונים...");
+        try {
+          await loadData();
+          navigateTo(
+            currentUser.role === "teacher" ? "dashboard" : "my-dashboard",
+          );
+        } catch (e) {
+          toast("שגיאה בטעינה: " + e.message, "error");
+        } finally {
+          hideLoading();
+        }
+      }
+      async function loadData() {
+        if (currentUser.role === "teacher") {
+          const res = await apiCall("getAllStudents");
+          studentsData = res.students || [];
+        } else {
+          const res = await apiCall("getStudentData", {
+            username: currentUser.username,
+          });
+          studentsData = [res.student];
+          const s = res.student;
+          if (s) {
+            currentUser.topic = s.projectTopic || "";
+            currentUser.guidanceDay = s.guidanceDay ?? 0;
+            currentUser.institution = s.institution || "";
+          }
+        }
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  SIDEBAR & NAVIGATION
+      // ══════════════════════════════════════════════════════
+      const teacherNav = [
+        {
+          section: "ראשי",
+          items: [
+            { id: "dashboard", icon: "⬡", label: "לוח בקרה" },
+            { id: "students", icon: "👩‍💻", label: "תלמידות" },
+          ],
+        },
+        {
+          section: "ניהול",
+          items: [
+            { id: "grades", icon: "📊", label: "ציונים ומשוב" },
+            { id: "submissions", icon: "📂", label: "הגשות" },
+            { id: "settings", icon: "⚙", label: "הגדרות" },
+          ],
+        },
+      ];
+      const studentNav = [
+        {
+          section: "שלי",
+          items: [
+            { id: "my-dashboard", icon: "⬡", label: "הלוח שלי" },
+            { id: "daily-log", icon: "📝", label: "יומן יומי" },
+            { id: "my-submissions", icon: "📂", label: "הגשות שלי" },
+            { id: "history", icon: "🕐", label: "היסטוריה" },
+          ],
+        },
+      ];
+
+      function buildSidebar() {
+        const nav = currentUser.role === "teacher" ? teacherNav : studentNav;
+        $("sidebarNav").innerHTML = nav
+          .map(
+            (sec) =>
+              `<div class="nav-section"><span class="nav-label">${sec.section}</span>${sec.items.map((i) => `<div class="nav-item" data-page="${i.id}" onclick="navigateTo('${i.id}')"><div class="nav-icon">${i.icon}</div>${i.label}</div>`).join("")}</div>`,
+          )
+          .join("");
+      }
+      function navigateTo(pid) {
+        document
+          .querySelectorAll(".page")
+          .forEach((p) => p.classList.remove("active"));
+        document
+          .querySelectorAll(".nav-item")
+          .forEach((n) => n.classList.remove("active"));
+        const p = $("page-" + pid);
+        if (p) p.classList.add("active");
+        const n = document.querySelector(`.nav-item[data-page="${pid}"]`);
+        if (n) n.classList.add("active");
+        if (pid === "grades") {
+          $("gradesListView").style.display = "";
+          $("studentDetailView").style.display = "none";
+        }
+        (
+          ({
+            dashboard: renderDashboard,
+            students: renderStudents,
+            grades: renderGradesList,
+            submissions: renderSubmissions,
+            settings: renderSettings,
+            "my-dashboard": renderStudentDashboard,
+            "daily-log": renderDailyLog,
+            "my-submissions": renderMySubmissions,
+            history: renderHistory,
+          })[pid] || function () {}
+        )();
+        $("sidebar").classList.remove("open");
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  TEACHER — DASHBOARD
+      // ══════════════════════════════════════════════════════
+      function renderDashboard() {
+        const total = studentsData.length,
+          approved = studentsData.filter((s) => s.approved).length;
+        const grades = studentsData
+          .map((s) => s.weeks?.at(-1)?.weeklyGrade)
+          .filter((v) => v != null);
+        const avg = grades.length
+          ? Math.round(grades.reduce((a, b) => a + b, 0) / grades.length)
+          : 0;
+        const pending = studentsData.filter((s) => {
+          const w = s.weeks?.at(-1);
+          return w && !w.portfolioSubmitted;
+        }).length;
+        $("dashDate").textContent = new Date().toLocaleDateString("he-IL", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+        $("dashStats").innerHTML = `
+    <div class="stat-card"><div class="glow-corner" style="background:var(--accent)"></div><div class="stat-val" style="color:var(--accent2)">${total}</div><div class="stat-lbl">סה"כ תלמידות</div></div>
+    <div class="stat-card"><div class="glow-corner" style="background:var(--green)"></div><div class="stat-val" style="color:var(--green)">${approved}</div><div class="stat-lbl">מאושרות להנחיה</div></div>
+    <div class="stat-card"><div class="glow-corner" style="background:var(--gold)"></div><div class="stat-val" style="color:${gradeColor(avg)}">${avg || "—"}</div><div class="stat-lbl">ממוצע שבועי</div></div>
+    <div class="stat-card"><div class="glow-corner" style="background:var(--red)"></div><div class="stat-val" style="color:var(--red)">${pending}</div><div class="stat-lbl">הגשות ממתינות</div></div>`;
+        drawWeeklyChart();
+        drawDistChart(grades);
+        buildInstFilter("dashInstFilter", (inst) =>
+          renderDashTable(filterByInst(inst)),
+        );
+        renderDashTable(studentsData);
+      }
+      function renderDashTable(data) {
+        $("dashTable").innerHTML =
+          `<thead><tr><th>שם</th><th>מוסד</th><th>נושא</th><th>ציון שבועי</th><th>תיק</th><th>תיעוד</th><th>סטטוס</th><th></th></tr></thead><tbody>
+  ${data
+    .map((s) => {
+      const w = s.weeks?.at(-1);
+      return `<tr>
+    <td style="font-weight:700">${s.firstName} ${s.lastName}</td>
+    <td><span class="badge badge-cyan" style="font-size:10px">${s.institution || "—"}</span></td>
+    <td style="color:var(--text2);font-size:12px">${s.projectTopic || "—"}</td>
+    <td><span class="font-mono" style="font-weight:800;color:${gradeColor(w?.weeklyGrade)}">${w?.weeklyGrade ?? "—"}</span></td>
+    <td>${w?.portfolioSubmitted ? '<span class="badge badge-green">✓</span>' : '<span class="badge badge-red">✗</span>'}</td>
+    <td>${w?.docSubmitted ? '<span class="badge badge-green">✓</span>' : '<span class="badge badge-red">✗</span>'}</td>
+    <td>${s.approved ? '<span class="badge badge-green">מאושרת</span>' : '<span class="badge badge-red">לא מאושרת</span>'}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="openStudentDetail('${s.id}')">פרטים →</button></td>
+  </tr>`;
+    })
+    .join("")}</tbody>`;
+      }
+      function drawWeeklyChart() {
+        const ctx = $("chartWeekly").getContext("2d");
+        if (ctx._chart) ctx._chart.destroy();
+        const labels = ["שבוע 1", "שבוע 2", "שבוע 3", "שבוע 4", "שבוע 5"];
+        const data = labels.map((_, i) => {
+          const v = studentsData
+            .map((s) => s.weeks?.[i]?.weeklyGrade)
+            .filter((v) => v != null);
+          return v.length
+            ? Math.round(v.reduce((a, b) => a + b, 0) / v.length)
+            : null;
+        });
+        ctx._chart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "ממוצע",
+                data,
+                borderColor: "#7b68ff",
+                backgroundColor: "rgba(123,104,255,0.07)",
+                borderWidth: 2.5,
+                pointBackgroundColor: "#7b68ff",
+                pointBorderColor: "var(--card)",
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                tension: 0.4,
+                fill: true,
+                spanGaps: true,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                ticks: { color: "var(--dim)", font: { size: 11 } },
+                grid: { color: "rgba(37,37,56,0.5)" },
+              },
+              y: {
+                min: 0,
+                max: 100,
+                ticks: { color: "var(--dim)", font: { size: 11 } },
+                grid: { color: "rgba(37,37,56,0.5)" },
+                border: { display: false },
+              },
+            },
+          },
+        });
+      }
+      function drawDistChart(grades) {
+        const ctx = $("chartDist").getContext("2d");
+        if (ctx._chart) ctx._chart.destroy();
+        const bins = [0, 0, 0, 0, 0];
+        grades.forEach((g) => {
+          if (g < 50) bins[0]++;
+          else if (g < 60) bins[1]++;
+          else if (g < 70) bins[2]++;
+          else if (g < 85) bins[3]++;
+          else bins[4]++;
+        });
+        ctx._chart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: ["0-50", "50-60", "60-70", "70-85", "85+"],
+            datasets: [
+              {
+                data: bins,
+                backgroundColor: [
+                  "rgba(255,77,109,0.6)",
+                  "rgba(255,77,109,0.4)",
+                  "rgba(255,204,68,0.5)",
+                  "rgba(0,229,160,0.5)",
+                  "rgba(0,229,160,0.7)",
+                ],
+                borderRadius: 5,
+                borderSkipped: false,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                ticks: { color: "var(--dim)", font: { size: 11 } },
+                grid: { display: false },
+              },
+              y: {
+                ticks: { color: "var(--dim)", font: { size: 11 }, stepSize: 1 },
+                grid: { color: "rgba(37,37,56,0.5)" },
+                border: { display: false },
+              },
+            },
+          },
+        });
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  TEACHER — STUDENTS
+      // ══════════════════════════════════════════════════════
+      function renderStudents() {
+        updateInstDatalist();
+        $("studentsSubtitle").textContent =
+          studentsData.length + " תלמידות רשומות";
+        buildInstFilter("studentsInstFilter", (inst) =>
+          renderStudentsGrid(filterByInst(inst)),
+        );
+        renderStudentsGrid(studentsData);
+      }
+      function renderStudentsGrid(data) {
+        $("studentsGrid").innerHTML =
+          data
+            .map((s) => {
+              const w = s.weeks?.at(-1);
+              const dl = (w?.dailyLogs || []).filter(
+                (d) => d.grade != null && d.grade !== "",
+              );
+              const da = dl.length
+                ? (
+                    (dl.reduce((a, b) => a + +b.grade, 0) / dl.length) *
+                    10
+                  ).toFixed(0)
+                : null;
+              return `<div class="student-card ${s.approved ? "approved" : "pending"}" onclick="openStudentDetail('${s.id}')">
+      <div style="padding-right:10px">
+        <div class="sc-name">${s.firstName} ${s.lastName}</div>
+        <div class="sc-inst">${s.institution || "ללא מוסד"}</div>
+        <div class="sc-topic">${s.projectTopic || "—"}</div>
+        <div class="sc-stats">
+          <div class="sc-s"><div class="sc-sv" style="color:${gradeColor(w?.weeklyGrade)}">${w?.weeklyGrade ?? "—"}</div><div class="sc-sl">שבועי</div></div>
+          <div class="sc-s"><div class="sc-sv" style="color:var(--accent2)">${da ?? "—"}</div><div class="sc-sl">יומי</div></div>
+          <div class="sc-s"><div class="sc-sv" style="color:var(--gold)">${s.weeks?.length || 1}</div><div class="sc-sl">שבועות</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+          <span style="font-size:11px;color:var(--muted)">הנחיה: ${DAYS_HEB[s.guidanceDay ?? 0]}</span>
+          ${s.approved ? '<span class="badge badge-green">מאושרת</span>' : '<span class="badge badge-red">לא מאושרת</span>'}
+        </div>
+      </div>
+    </div>`;
+            })
+            .join("") ||
+          `<div style="color:var(--muted);padding:24px;text-align:center;grid-column:1/-1">אין תלמידות</div>`;
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  TEACHER — GRADES LIST
+      // ══════════════════════════════════════════════════════
+      function renderGradesList() {
+        buildInstFilter("gradesInstFilter", (inst) =>
+          renderGradesTable(filterByInst(inst)),
+        );
+        renderGradesTable(studentsData);
+      }
+      function renderGradesTable(data) {
+        $("gradesTable").innerHTML =
+          `<thead><tr><th>תלמידה</th><th>מוסד</th><th>שבוע</th><th>יומי</th><th>תיק</th><th>תיעוד</th><th>ציון שבועי</th><th>אישור</th><th></th></tr></thead><tbody>
+  ${data
+    .map((s) => {
+      const w = s.weeks?.at(-1),
+        wn = s.weeks?.length || 1,
+        dl = (w?.dailyLogs || []).filter(
+          (d) => d.grade != null && d.grade !== "",
+        ),
+        da = dl.length
+          ? (dl.reduce((a, b) => a + +b.grade, 0) / dl.length).toFixed(1)
+          : null;
+      return `<tr>
+    <td style="font-weight:700">${s.firstName} ${s.lastName}</td>
+    <td><span class="badge badge-cyan" style="font-size:10px">${s.institution || "—"}</span></td>
+    <td><span class="badge badge-purple">שבוע ${wn}</span></td>
+    <td><span class="font-mono">${da ?? "—"}/10</span></td>
+    <td><span class="font-mono" style="color:var(--accent2)">${w?.portfolioGrade ?? "—"}</span></td>
+    <td><span class="font-mono" style="color:var(--gold)">${w?.docGrade ?? "—"}</span></td>
+    <td><span class="font-mono" style="font-weight:800;font-size:18px;color:${gradeColor(w?.weeklyGrade)}">${w?.weeklyGrade ?? "—"}</span></td>
+    <td>${s.approved ? '<span class="badge badge-green">מאושרת</span>' : '<span class="badge badge-red">לא מאושרת</span>'}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="openStudentDetail('${s.id}')">עריכה →</button></td>
+  </tr>`;
+    })
+    .join("")}</tbody>`;
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  TEACHER — STUDENT DETAIL
+      // ══════════════════════════════════════════════════════
+      function openStudentDetail(sid) {
+        const s = studentsData.find((x) => String(x.id) === String(sid));
+        if (!s) return;
+        currentStudentDetail = s;
+        navigateTo("grades");
+        $("gradesListView").style.display = "none";
+        $("studentDetailView").style.display = "block";
+        renderStudentDetail(s, s.weeks?.length - 1 || 0);
+      }
+      function renderStudentDetail(s, wi) {
+        const weeks = s.weeks || [],
+          week = weeks[wi] || null;
+        $("studentDetailView").innerHTML = `
+    <div class="page-header">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="backToGradesList()">← חזרה</button>
+        <div><h2 class="page-title">${s.firstName} <span>${s.lastName}</span></h2>
+        <p class="page-sub">${s.institution || "—"} · ${s.projectTopic || "—"} · הנחיה: ${DAYS_HEB[s.guidanceDay ?? 0]}</p></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="openTasksModalFor('${s.id}',${wi})">📋 משימות</button>
+        <button class="btn btn-ghost btn-sm" onclick="openGuidanceModal('${s.id}')">📅 יום הנחיה</button>
+        <button class="btn btn-ghost btn-sm" onclick="addWeekToStudent('${s.id}')">+ שבוע</button>
+        <button class="btn btn-sm ${s.approved ? "btn-danger" : "btn-success"}" onclick="toggleApproval('${s.id}')">${s.approved ? "✗ ביטול" : "✓ אישור הנחיה"}</button>
+      </div>
+    </div>
+    <div class="grid-4 mb-18">
+      <div class="stat-card"><div class="glow-corner" style="background:var(--green)"></div><div class="stat-val" style="color:${gradeColor(week?.weeklyGrade)}">${week?.weeklyGrade ?? "—"}</div><div class="stat-lbl">ציון שבועי</div></div>
+      <div class="stat-card"><div class="glow-corner" style="background:var(--accent)"></div><div class="stat-val" style="color:var(--accent2)">${week?.portfolioGrade ?? "—"}</div><div class="stat-lbl">תיק פרויקט</div></div>
+      <div class="stat-card"><div class="glow-corner" style="background:var(--gold)"></div><div class="stat-val" style="color:var(--gold)">${week?.docGrade ?? "—"}</div><div class="stat-lbl">תיעוד ביצוע</div></div>
+      <div class="stat-card"><div class="glow-corner" style="background:${s.approved ? "var(--green)" : "var(--red)"}"></div><div class="stat-val" style="color:${s.approved ? "var(--green)" : "var(--red)"};font-size:20px;margin-top:6px">${s.approved ? "✓ מאושרת" : "✗ לא מאושרת"}</div><div class="stat-lbl">סטטוס</div></div>
+    </div>
+    <div class="week-pills">
+      ${weeks.map((w, i) => `<div class="week-pill ${i === wi ? "active" : ""} ${w.locked ? "locked" : ""}" onclick="renderStudentDetail(currentStudentDetail,${i})">שבוע ${w.weekNum || i + 1}</div>`).join("")}
+    </div>
+    ${
+      week
+        ? `<div class="card">
+      <div class="tabs">
+        <div class="tab active" id="td-tab-daily" onclick="showDetailTab('daily')">📝 יומן יומי</div>
+        <div class="tab" id="td-tab-portfolio" onclick="showDetailTab('portfolio')">📁 תיק פרויקט</div>
+        <div class="tab" id="td-tab-doc" onclick="showDetailTab('doc')">📋 תיעוד</div>
+        <div class="tab" id="td-tab-weekly" onclick="showDetailTab('weekly')">⭐ ציון שבועי</div>
+        <div class="tab" id="td-tab-tasks" onclick="showDetailTab('tasks')">📌 משימות</div>
+      </div>
+      <div id="td-content-daily">${(week.dailyLogs || [])
+        .map(
+          (log, li) => `
+        <div class="day-row">
+          <div class="day-row-hd">
+            <span class="day-name">יום ${log.day || DAYS_HEB[li]}</span>
+            <div style="display:flex;align-items:center;gap:7px">
+              <input type="number" min="0" max="10" class="grade-inp" value="${log.grade ?? ""}" placeholder="0-10"
+                onchange="updateDailyGrade('${s.id}',${wi},${li},this.value)" />
+              <span style="font-size:11px;color:var(--muted)">/10</span>
+            </div>
+          </div>
+          <div class="grid-2" style="gap:10px">
+            <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">מה עשתה</div>
+            <div style="font-size:13px;color:${log.done ? "var(--text)" : "var(--dim)"}">${log.done || "לא דווח"}</div></div>
+            <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">הערת מורה</label>
+            <input class="form-input" value="${log.notes || ""}" placeholder="הוסיפי הערה..." onchange="updateDailyNote('${s.id}',${wi},${li},this.value)"/></div>
+          </div>
+        </div>`,
+        )
+        .join("")}</div>
+      <div id="td-content-portfolio" style="display:none">
+        <div style="display:flex;align-items:center;gap:18px;margin-bottom:18px">
+          ${scoreRingHTML(week.portfolioGrade, 100, "var(--accent2)", 90)}
+          <div style="flex:1">
+            <div class="form-group"><label class="form-label">ציון תיק פרויקט (0-100)</label>
+              <input type="number" min="0" max="100" class="form-input" style="max-width:120px" value="${week.portfolioGrade ?? ""}" onchange="updateWeekField('${s.id}',${wi},'portfolioGrade',this.value)"/></div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+              <span class="badge ${week.portfolioSubmitted ? "badge-green" : "badge-red"}">${week.portfolioSubmitted ? "✓ הוגש" : "✗ לא הוגש"}</span>
+              ${week.portfolioUrl ? `<a href="${week.portfolioUrl}" target="_blank" class="btn btn-ghost btn-xs">🔗 פתח</a>` : ""}
+              <button class="btn btn-ghost btn-xs" onclick="toggleSubmission('${s.id}',${wi},'portfolio')">שנה סטטוס</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="background:var(--surface)">
+          <div class="card-title">מבנה תיק הנדרש</div>
+          ${[
+            "א. הגדרת הבעיה האלגוריתמית",
+            "ב. רקע תאורטי",
+            "ג. טכנולוגיות הנדסה",
+            "ד. תרשים בנושא ההנחיה",
+            "נספח א׳ — שאלות רלוונטיות",
+            "נספח ב׳ — פסאודו קוד",
+          ]
+            .map(
+              (item, i, arr) => `
+            <div style="display:flex;align-items:center;gap:9px;padding:8px 0;${i < arr.length - 1 ? "border-bottom:1px solid var(--border)" : ""}">
+              <span style="color:var(--accent2);font-weight:700;font-size:12px;min-width:16px">${i + 1}</span>
+              <span style="font-size:13px;color:var(--text2)">${item}</span>
+            </div>`,
+            )
+            .join("")}
+        </div>
+      </div>
+      <div id="td-content-doc" style="display:none">
+        <div style="display:flex;align-items:center;gap:18px">
+          ${scoreRingHTML(week.docGrade, 100, "var(--gold)", 90)}
+          <div style="flex:1">
+            <div class="form-group"><label class="form-label">ציון תיעוד ביצוע (0-100)</label>
+              <input type="number" min="0" max="100" class="form-input" style="max-width:120px" value="${week.docGrade ?? ""}" onchange="updateWeekField('${s.id}',${wi},'docGrade',this.value)"/></div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+              <span class="badge ${week.docSubmitted ? "badge-green" : "badge-red"}">${week.docSubmitted ? "✓ הוגש" : "✗ לא הוגש"}</span>
+              ${week.docUrl ? `<a href="${week.docUrl}" target="_blank" class="btn btn-ghost btn-xs">🔗 פתח</a>` : ""}
+              <button class="btn btn-ghost btn-xs" onclick="toggleSubmission('${s.id}',${wi},'doc')">שנה סטטוס</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="td-content-weekly" style="display:none">
+        <h4 style="font-size:14px;font-weight:700;margin-bottom:14px">חישוב ציון שבועי</h4>
+        ${weekScoreBreakdown(week)}
+        <div class="divider-gradient"></div>
+        <div class="form-group mt-8"><label class="form-label">ציון שבועי סופי (ידני / חישוב)</label>
+          <div style="display:flex;gap:10px;align-items:center">
+            <input type="number" min="0" max="100" class="form-input" style="max-width:120px" value="${week.weeklyGrade ?? ""}" onchange="updateWeekField('${s.id}',${wi},'weeklyGrade',this.value)"/>
+            <button class="btn btn-ghost btn-sm" onclick="autoCalcWeekly('${s.id}',${wi})">← חישוב אוטומטי</button>
+          </div>
+          <p style="font-size:11px;color:var(--muted);margin-top:5px">ציון ≥ 70 = מאושרת להנחיה הבאה</p>
+        </div>
+        ${week.weeklyGrade != null ? `<button class="btn btn-sm ${week.weeklyGrade >= 70 ? "btn-success" : "btn-danger"}" onclick="setApprovalFromWeekly('${s.id}',${week.weeklyGrade >= 70})">${week.weeklyGrade >= 70 ? "✓ סמן כמאושרת" : "✗ סמן כלא מאושרת"}</button>` : ""}
+      </div>
+      <div id="td-content-tasks" style="display:none">
+        <div class="info-banner mb-14">📌 המשימות מוצגות לתלמידה על מסך הבית עד ההנחיה הבאה</div>
+        ${
+          week.tasks
+            ? `<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px">${week.tasks
+                .split("\n")
+                .filter(Boolean)
+                .map(
+                  (t) =>
+                    `<div style="display:flex;align-items:flex-start;gap:9px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px"><div style="width:5px;height:5px;border-radius:50%;background:var(--accent2);flex-shrink:0;margin-top:6px"></div><span style="font-size:13px">${t}</span></div>`,
+                )
+                .join("")}</div>`
+            : '<p style="color:var(--muted);margin-bottom:14px">אין משימות מוגדרות</p>'
+        }
+        <button class="btn btn-primary btn-sm" onclick="openTasksModalFor('${s.id}',${wi})">✏️ ערכי משימות</button>
+      </div>
+    </div>`
+        : `<div class="card"><p style="color:var(--muted);text-align:center;padding:24px">אין נתונים לשבוע זה</p></div>`
+    }`;
+      }
+      function weekScoreBreakdown(week) {
+        const dl = (week.dailyLogs || []).filter(
+          (d) => d.grade != null && d.grade !== "",
+        );
+        const da = dl.length
+          ? Math.round((dl.reduce((a, b) => a + +b.grade, 0) / dl.length) * 10)
+          : 0;
+        const port = +week.portfolioGrade || 0,
+          doc = +week.docGrade || 0;
+        const calc = calcWeeklyScore(week);
+        return `<div class="card" style="background:var(--surface)">
+    ${[
+      { l: "עבודה יומית (30%)", v: da, w: 0.3, c: "var(--accent2)" },
+      { l: "תיק פרויקט (30%)", v: port, w: 0.3, c: "var(--cyan)" },
+      { l: "תיעוד ביצוע (40%)", v: doc, w: 0.4, c: "var(--gold)" },
+    ]
+      .map(
+        (i) => `
+    <div class="score-row">
+      <span style="font-size:12px;color:var(--text2);width:160px">${i.l}</span>
+      <div class="score-bar-wrap"><div class="score-bar-fill" style="width:${i.v}%;background:${i.c};box-shadow:0 0 5px ${i.c}"></div></div>
+      <span class="font-mono" style="font-size:12px;font-weight:700;width:85px;text-align:left">${i.v} → ${Math.round(i.v * i.w)}</span>
+    </div>`,
+      )
+      .join("")}
+    <div style="display:flex;justify-content:space-between;padding:10px 0 0;font-weight:700">
+      <span style="color:var(--text2)">ציון מחושב:</span>
+      <span class="font-mono" style="font-size:24px;color:${gradeColor(calc)};text-shadow:0 0 12px ${gradeColor(calc)}">${calc ?? "—"}</span>
+    </div>
+  </div>`;
+      }
+      function showDetailTab(tab) {
+        ["daily", "portfolio", "doc", "weekly", "tasks"].forEach((t) => {
+          const c = $(`td-content-${t}`),
+            b = $(`td-tab-${t}`);
+          if (c) c.style.display = t === tab ? "" : "none";
+          if (b) b.classList.toggle("active", t === tab);
+        });
+      }
+      function backToGradesList() {
+        $("gradesListView").style.display = "";
+        $("studentDetailView").style.display = "none";
+        renderGradesList();
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  TEACHER — SUBMISSIONS & SETTINGS
+      // ══════════════════════════════════════════════════════
+      function renderSubmissions() {
+        $("submissionsContent").innerHTML = `
+    <div class="card mb-14"><div class="card-title">📁 תיקי פרויקט</div><div class="table-wrap"><table class="tbl"><thead><tr><th>תלמידה</th><th>מוסד</th><th>שבוע</th><th>יום הנחיה</th><th>סטטוס</th><th>ציון</th><th>קישור</th></tr></thead><tbody>
+    ${studentsData
+      .map((s) => {
+        const w = s.weeks?.at(-1),
+          wn = s.weeks?.length || 1;
+        return `<tr>
+      <td style="font-weight:700">${s.firstName} ${s.lastName}</td>
+      <td><span class="badge badge-cyan" style="font-size:10px">${s.institution || "—"}</span></td>
+      <td><span class="badge badge-purple">שבוע ${wn}</span></td>
+      <td>${DAYS_HEB[s.guidanceDay ?? 0]}</td>
+      <td>${w?.portfolioSubmitted ? '<span class="badge badge-green">✓ הוגש</span>' : '<span class="badge badge-red">✗ ממתין</span>'}</td>
+      <td><span class="font-mono" style="color:var(--accent2)">${w?.portfolioGrade ?? "—"}</span></td>
+      <td>${w?.portfolioUrl ? `<a href="${w.portfolioUrl}" target="_blank" class="btn btn-ghost btn-xs">🔗</a>` : "—"}</td>
+    </tr>`;
+      })
+      .join("")}</tbody></table></div></div>
+    <div class="card"><div class="card-title">📋 תיעודי ביצוע</div><div class="table-wrap"><table class="tbl"><thead><tr><th>תלמידה</th><th>מוסד</th><th>שבוע</th><th>סטטוס</th><th>ציון</th><th>קישור</th></tr></thead><tbody>
+    ${studentsData
+      .map((s) => {
+        const w = s.weeks?.at(-1),
+          wn = s.weeks?.length || 1;
+        return `<tr>
+      <td style="font-weight:700">${s.firstName} ${s.lastName}</td>
+      <td><span class="badge badge-cyan" style="font-size:10px">${s.institution || "—"}</span></td>
+      <td><span class="badge badge-purple">שבוע ${wn}</span></td>
+      <td>${w?.docSubmitted ? '<span class="badge badge-green">✓ הוגש</span>' : '<span class="badge badge-red">✗ ממתין</span>'}</td>
+      <td><span class="font-mono" style="color:var(--gold)">${w?.docGrade ?? "—"}</span></td>
+      <td>${w?.docUrl ? `<a href="${w.docUrl}" target="_blank" class="btn btn-ghost btn-xs">🔗</a>` : "—"}</td>
+    </tr>`;
+      })
+      .join("")}</tbody></table></div></div>`;
+      }
+      function renderSettings() {
+        $("settingsTable").innerHTML =
+          `<thead><tr><th>תלמידה</th><th>מוסד</th><th>יום הנחיה</th><th>שינוי</th></tr></thead><tbody>
+  ${studentsData
+    .map(
+      (s) => `<tr>
+    <td style="font-weight:700">${s.firstName} ${s.lastName}</td>
+    <td><span class="badge badge-cyan" style="font-size:10px">${s.institution || "—"}</span></td>
+    <td><span class="badge badge-gold">${DAYS_HEB[s.guidanceDay ?? 0]}</span></td>
+    <td><select class="form-select" style="width:120px" onchange="changeGuidanceDay('${s.id}',this.value)">
+      ${DAYS_HEB.slice(0, 5)
+        .map(
+          (d, i) =>
+            `<option value="${i}" ${s.guidanceDay == i ? "selected" : ""}>${d}</option>`,
+        )
+        .join("")}
+    </select></td>
+  </tr>`,
+    )
+    .join("")}</tbody>`;
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  DATA MUTATIONS
+      // ══════════════════════════════════════════════════════
+      async function updateDailyGrade(sid, wi, di, val) {
+        const s = studentsData.find((x) => String(x.id) === String(sid));
+        if (!s?.weeks[wi]) return;
+        s.weeks[wi].dailyLogs[di].grade = val === "" ? null : +val;
+        await saveStudentWeek(s, wi);
+      }
+      async function updateDailyNote(sid, wi, di, val) {
+        const s = studentsData.find((x) => String(x.id) === String(sid));
+        if (!s?.weeks[wi]) return;
+        s.weeks[wi].dailyLogs[di].notes = val;
+        await saveStudentWeek(s, wi);
+      }
+      async function updateWeekField(sid, wi, field, val) {
+        const s = studentsData.find((x) => String(x.id) === String(sid));
+        if (!s?.weeks[wi]) return;
+        s.weeks[wi][field] = val === "" ? null : isNaN(val) ? val : +val;
+        await saveStudentWeek(s, wi);
+        renderStudentDetail(s, wi);
+      }
+      async function toggleSubmission(sid, wi, type) {
+        const s = studentsData.find((x) => String(x.id) === String(sid));
+        if (!s?.weeks[wi]) return;
+        s.weeks[wi][
+          type === "portfolio" ? "portfolioSubmitted" : "docSubmitted"
+        ] ^= true;
+        await saveStudentWeek(s, wi);
+        renderStudentDetail(s, wi);
+      }
+      async function toggleApproval(sid) {
+        const s = studentsData.find((x) => String(x.id) === String(sid));
+        if (!s) return;
+        s.approved = !s.approved;
+        try {
+          await apiPost("updateApproval", {
+            studentId: sid,
+            approved: s.approved,
+          });
+          toast(s.approved ? "אושרה ✓" : "בוטל אישור");
+          renderStudentDetail(s, s.weeks?.length - 1 || 0);
+        } catch (e) {
+          toast("שגיאה", "error");
+        }
+      }
+      async function setApprovalFromWeekly(sid, val) {
+        const s = studentsData.find((x) => String(x.id) === String(sid));
+        if (!s) return;
+        s.approved = val;
+        try {
+          await apiPost("updateApproval", { studentId: sid, approved: val });
+          toast(val ? "אושרה ✓" : "לא אושרה");
+          renderStudentDetail(s, s.weeks?.length - 1 || 0);
+        } catch (e) {
+          toast("שגיאה", "error");
+        }
+      }
+      async function autoCalcWeekly(sid, wi) {
+        const s = studentsData.find((x) => String(x.id) === String(sid));
+        if (!s?.weeks[wi]) return;
+        const c = calcWeeklyScore(s.weeks[wi]);
+        s.weeks[wi].weeklyGrade = c;
+        await saveStudentWeek(s, wi);
+        renderStudentDetail(s, wi);
+        toast(`ציון שבועי: ${c}`);
+      }
+      async function addWeekToStudent(sid) {
+        const s = studentsData.find((x) => String(x.id) === String(sid));
+        if (!s) return;
+        const nw = {
+          weekNum: (s.weeks?.length || 0) + 1,
+          dailyLogs: DAYS_HEB.slice(0, 5).map((d) => ({
+            day: d,
+            done: "",
+            notes: "",
+            grade: null,
+          })),
+          portfolioGrade: null,
+          docGrade: null,
+          weeklyGrade: null,
+          portfolioSubmitted: false,
+          docSubmitted: false,
+          portfolioUrl: "",
+          docUrl: "",
+          locked: false,
+          tasks: "",
+        };
+        if (!s.weeks) s.weeks = [];
+        s.weeks.push(nw);
+        try {
+          await apiPost("addWeek", { studentId: sid, weekData: nw });
+          toast("שבוע חדש נוסף ✓");
+          renderStudentDetail(s, s.weeks.length - 1);
+        } catch (e) {
+          toast("שגיאה", "error");
+        }
+      }
+      async function saveStudentWeek(s, wi) {
+        try {
+          await apiPost("saveWeek", {
+            studentId: s.id,
+            weekIdx: wi,
+            weekData: s.weeks[wi],
+          });
+          toast("נשמר ✓");
+        } catch (e) {
+          toast("שגיאת שמירה", "error");
+        }
+      }
+      async function changeGuidanceDay(sid, val) {
+        const s = studentsData.find((x) => String(x.id) === String(sid));
+        if (!s) return;
+        s.guidanceDay = +val;
+        try {
+          await apiPost("updateGuidanceDay", {
+            studentId: sid,
+            guidanceDay: +val,
+          });
+          toast("יום הנחיה עודכן ✓");
+        } catch (e) {
+          toast("שגיאה", "error");
+        }
+      }
+
+      function openTasksModalFor(sid, wi) {
+        const s = studentsData.find((x) => String(x.id) === String(sid));
+        if (!s) return;
+        _tasksCtx = { studentId: sid, weekIdx: wi };
+        $("tasksInput").value = s.weeks?.[wi]?.tasks || "";
+        openModal("tasksModal");
+      }
+      async function saveTasks() {
+        if (!_tasksCtx) return;
+        const tasks = $("tasksInput").value.trim();
+        const s = studentsData.find(
+          (x) => String(x.id) === String(_tasksCtx.studentId),
+        );
+        if (!s?.weeks[_tasksCtx.weekIdx]) return;
+        s.weeks[_tasksCtx.weekIdx].tasks = tasks;
+        try {
+          await apiPost("saveWeek", {
+            studentId: _tasksCtx.studentId,
+            weekIdx: _tasksCtx.weekIdx,
+            weekData: s.weeks[_tasksCtx.weekIdx],
+          });
+          toast("משימות נשמרו ✓");
+          closeModal("tasksModal");
+          if (
+            currentStudentDetail &&
+            String(currentStudentDetail.id) === String(_tasksCtx.studentId)
+          )
+            renderStudentDetail(currentStudentDetail, _tasksCtx.weekIdx);
+        } catch (e) {
+          toast("שגיאה", "error");
+        }
+      }
+      function openGuidanceModal(sid) {
+        const s = studentsData.find((x) => String(x.id) === String(sid));
+        if (!s) return;
+        _gdCtx = { studentId: sid };
+        $("gd_day").value = s.guidanceDay ?? 0;
+        openModal("guidanceModal");
+      }
+      async function saveGuidanceDay() {
+        if (!_gdCtx) return;
+        const val = +$("gd_day").value;
+        const s = studentsData.find(
+          (x) => String(x.id) === String(_gdCtx.studentId),
+        );
+        if (!s) return;
+        s.guidanceDay = val;
+        try {
+          await apiPost("updateGuidanceDay", {
+            studentId: _gdCtx.studentId,
+            guidanceDay: val,
+          });
+          toast("יום הנחיה עודכן ✓");
+          closeModal("guidanceModal");
+          renderStudentDetail(s, s.weeks?.length - 1 || 0);
+        } catch (e) {
+          toast("שגיאה", "error");
+        }
+      }
+
+      async function submitAddStudent() {
+        const first = $("ns_first").value.trim(),
+          last = $("ns_last").value.trim(),
+          user = $("ns_user").value.trim(),
+          pass = $("ns_pass").value.trim(),
+          inst = $("ns_inst").value.trim();
+        if (!first || !last || !user || !pass || !inst) {
+          toast("מלאי את השדות המחויבים", "error");
+          return;
+        }
+        showLoading("מוסיף תלמידה...");
+        try {
+          const res = await apiPost("addStudent", {
+            firstName: first,
+            lastName: last,
+            username: user,
+            password: pass,
+            tid: $("ns_id").value.trim(),
+            institution: inst,
+            projectTopic: $("ns_topic").value.trim(),
+            guidanceDay: +$("ns_day").value,
+            year: $("ns_year").value.trim(),
+          });
+          hideLoading();
+          if (res.success) {
+            toast("התלמידה נוספה! ✓");
+            closeModal("addStudentModal");
+            await loadData();
+            renderStudents();
+          } else toast(res.error || "שגיאה", "error");
+        } catch (e) {
+          hideLoading();
+          toast("שגיאה: " + e.message, "error");
+        }
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  STUDENT — DASHBOARD
+      // ══════════════════════════════════════════════════════
+      function renderStudentDashboard() {
+        const s = studentsData[0];
+        if (!s) {
+          $("studentDashContent").innerHTML =
+            '<p style="color:var(--muted)">טוען...</p>';
+          return;
+        }
+        const weeks = s.weeks || [],
+          cur = weeks.at(-1) || {},
+          prev = weeks.slice(0, -1);
+        const allG = prev.map((w) => w.weeklyGrade).filter((v) => v != null);
+        const avg = allG.length
+          ? Math.round(allG.reduce((a, b) => a + b, 0) / allG.length)
+          : null;
+        const todayIdx = new Date().getDay(),
+          tasks = cur.tasks ? cur.tasks.split("\n").filter(Boolean) : [];
+        $("studentDashContent").innerHTML = `
+    <div class="page-header">
+      <div><h2 class="page-title">${getGreeting()}, <span>${s.firstName}</span> 👋</h2>
+      <p class="page-sub">פרויקט: ${s.projectTopic || "—"} · מוסד: ${s.institution || "—"} · הנחיה: ${DAYS_HEB[s.guidanceDay ?? 0]}</p></div>
+      <div style="display:flex;gap:6px"><span class="badge badge-cyan">היום: ${DAYS_HEB[todayIdx]}</span><span class="badge badge-muted">שבוע ${weeks.length}</span></div>
+    </div>
+    <div class="tasks-widget">
+      <div class="tasks-widget-title">📌 משימות לשבוע זה</div>
+      <div class="tasks-widget-head">${tasks.length ? "המשימות שהוגדרו לשבוע הנוכחי:" : "אין משימות מוגדרות עדיין"}</div>
+      ${tasks.length ? `<div class="task-list">${tasks.map((t) => `<div class="task-item"><div class="task-dot"></div><span>${t}</span></div>`).join("")}</div>` : '<p style="color:rgba(255,255,255,0.35);font-size:13px">המורה תוסיף משימות ביום ההנחיה</p>'}
+    </div>
+    <div class="grid-4 mb-18">
+      <div class="stat-card"><div class="glow-corner" style="background:var(--accent)"></div><div class="stat-val" style="color:${gradeColor(cur.weeklyGrade)}">${cur.weeklyGrade ?? "—"}</div><div class="stat-lbl">ציון שבועי נוכחי</div></div>
+      <div class="stat-card"><div class="glow-corner" style="background:var(--green)"></div><div class="stat-val" style="color:var(--green)">${avg ?? "—"}</div><div class="stat-lbl">ממוצע כללי</div></div>
+      <div class="stat-card"><div class="glow-corner" style="background:${cur.approved ? "var(--green)" : "var(--red)"}"></div><div class="stat-val" style="font-size:17px;margin-top:6px">${cur.approved ? '<span class="badge badge-green" style="font-size:12px">✓ מאושרת</span>' : '<span class="badge badge-red" style="font-size:12px">✗ לא מאושרת</span>'}</div><div class="stat-lbl">סטטוס הנחיה</div></div>
+      <div class="stat-card"><div class="glow-corner" style="background:var(--cyan)"></div><div class="stat-val" style="color:var(--cyan)">${(cur.dailyLogs || []).filter((d) => d.done).length}/5</div><div class="stat-lbl">ימי דיווח</div></div>
+    </div>
+    <div class="grid-2 mb-18">
+      <div class="card"><div class="card-title">ציונים שבועיים — מגמה</div><canvas id="studentWeeklyChart" height="160"></canvas></div>
+      <div class="card"><div class="card-title">רכיבי ציון — שבוע נוכחי</div><canvas id="studentCompChart" height="160"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px">יומן שבועי</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+        ${(cur.dailyLogs || Array(5).fill(null))
+          .map((log, i) => {
+            const today = todayIdx === i + 1,
+              done = log?.done,
+              grade = log?.grade;
+            return `<div style="background:var(--surface);border:1px solid ${today ? "var(--accent)" : done ? "rgba(0,229,160,0.3)" : "var(--border)"};border-radius:var(--r);padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.18s;${today ? "box-shadow:0 0 14px rgba(123,104,255,0.18)" : ""}" onclick="navigateTo('daily-log')">
+            <div style="font-size:11px;color:${today ? "var(--accent2)" : "var(--muted)"};font-weight:700;margin-bottom:6px">${DAYS_HEB[i]}</div>
+            <div class="font-mono" style="font-size:22px;font-weight:800;color:${grade != null ? gradeColor(grade * 10) : "var(--dim)"}">${grade != null ? grade : "—"}</div>
+            <div style="font-size:12px;margin-top:4px">${done ? '<span style="color:var(--green)">✓</span>' : today ? '<span style="color:var(--accent2)">●</span>' : '<span style="color:var(--dim)">○</span>'}</div>
+          </div>`;
+          })
+          .join("")}
+      </div>
+    </div>`;
+        setTimeout(() => {
+          drawStudentWeeklyChart(weeks);
+          drawStudentCompChart(cur);
+        }, 50);
+      }
+      function drawStudentWeeklyChart(weeks) {
+        const ctx = $("studentWeeklyChart");
+        if (!ctx) return;
+        const c = ctx.getContext("2d");
+        if (c._chart) c._chart.destroy();
+        c._chart = new Chart(c, {
+          type: "line",
+          data: {
+            labels: weeks.map((_, i) => `שבוע ${i + 1}`),
+            datasets: [
+              {
+                data: weeks.map((w) => w.weeklyGrade ?? null),
+                borderColor: "#7b68ff",
+                backgroundColor: "rgba(123,104,255,0.07)",
+                borderWidth: 2.5,
+                pointBackgroundColor: weeks.map((w) =>
+                  gradeColor(w.weeklyGrade),
+                ),
+                pointBorderColor: "var(--card)",
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                tension: 0.4,
+                fill: true,
+                spanGaps: true,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                ticks: { color: "var(--dim)", font: { size: 10 } },
+                grid: { color: "rgba(37,37,56,0.5)" },
+              },
+              y: {
+                min: 0,
+                max: 100,
+                ticks: { color: "var(--dim)", font: { size: 10 } },
+                grid: { color: "rgba(37,37,56,0.5)" },
+                border: { display: false },
+              },
+            },
+          },
+        });
+      }
+      function drawStudentCompChart(week) {
+        const ctx = $("studentCompChart");
+        if (!ctx) return;
+        const c = ctx.getContext("2d");
+        if (c._chart) c._chart.destroy();
+        const dl = (week.dailyLogs || []).filter(
+          (d) => d.grade != null && d.grade !== "",
+        );
+        const da = dl.length
+          ? Math.round((dl.reduce((a, b) => a + +b.grade, 0) / dl.length) * 10)
+          : 0;
+        c._chart = new Chart(c, {
+          type: "doughnut",
+          data: {
+            labels: ["עבודה יומית", "תיק פרויקט", "תיעוד ביצוע"],
+            datasets: [
+              {
+                data: [da, +week.portfolioGrade || 0, +week.docGrade || 0],
+                backgroundColor: [
+                  "rgba(123,104,255,0.8)",
+                  "rgba(0,212,255,0.7)",
+                  "rgba(255,204,68,0.7)",
+                ],
+                borderColor: ["#7b68ff", "#00d4ff", "#ffcc44"],
+                borderWidth: 1.5,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: {
+                  color: "var(--muted)",
+                  font: { size: 11 },
+                  padding: 12,
+                  boxWidth: 10,
+                },
+              },
+            },
+            cutout: "65%",
+          },
+        });
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  STUDENT — DAILY LOG
+      // ══════════════════════════════════════════════════════
+      function renderDailyLog() {
+        const s = studentsData[0];
+        if (!s) return;
+        const weeks = s.weeks || [],
+          cur = weeks.at(-1) || {},
+          locked = cur.locked === true;
+        $("dailyLogSub").textContent =
+          `שבוע ${weeks.length} · הנחיה ביום ${DAYS_HEB[s.guidanceDay ?? 0]}`;
+        $("dailyLogContent").innerHTML = `
+    ${locked ? `<div class="info-banner mb-14" style="border-color:rgba(255,77,109,0.3);background:rgba(255,77,109,0.06)">🔒 <span>שבוע זה נעול</span></div>` : ""}
+    <div class="week-pills" id="dayPills">${(cur.dailyLogs || [])
+      .map(
+        (d, i) => `
+      <div class="week-pill ${i === 0 ? "active" : ""}" id="daypill-${i}" onclick="selectDay(${i})">יום ${d.day || DAYS_HEB[i]}${d.grade != null ? ` <span style="font-size:10px;opacity:0.7">(${d.grade})</span>` : ""}</div>`,
+      )
+      .join("")}
+    </div>
+    <div id="dayLogBody">${renderDayLog(cur, 0, locked)}</div>`;
+        window._dlCtx = { s, cur, wnum: weeks.length - 1, locked };
+        window.selectDay = function (di) {
+          document
+            .querySelectorAll("#dayPills .week-pill")
+            .forEach((p, i) => p.classList.toggle("active", i === di));
+          $("dayLogBody").innerHTML = renderDayLog(
+            window._dlCtx.cur,
+            di,
+            window._dlCtx.locked,
+          );
+        };
+      }
+      function renderDayLog(week, di, locked) {
+        const log = (week.dailyLogs || [])[di] || {};
+        return `<div class="card relative">
+    ${locked ? `<div class="locked-overlay show"><div class="locked-icon">🔒</div><div class="locked-txt">שבוע נעול</div></div>` : ""}
+    <div class="card-title">יומן יום ${log.day || DAYS_HEB[di]}</div>
+    <div class="form-group"><label class="form-label">מה עשיתי היום</label>
+      <textarea class="form-textarea" id="dailyDoneInput" placeholder="תארי בפירוט מה עשית היום...">${log.done || ""}</textarea></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+      <div>${log.grade != null ? `<div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--muted)">ציון יומי:</span><span class="font-mono" style="font-size:26px;font-weight:800;color:${gradeColor(log.grade * 10)}">${log.grade}/10</span></div>` : '<span style="color:var(--dim);font-size:13px">ממתין לציון</span>'}</div>
+      ${!locked ? `<button class="btn btn-primary" onclick="submitDailyLog()">שליחת יומן ←</button>` : ""}
+    </div>
+    ${log.notes ? `<div style="margin-top:12px;background:var(--surface);border-right:2px solid var(--accent);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:10px 12px;font-size:13px;color:var(--accent2)">💬 <b>המורה:</b> ${log.notes}</div>` : ""}
+  </div>`;
+      }
+      async function submitDailyLog() {
+        const ctx = window._dlCtx;
+        if (!ctx || ctx.locked) return;
+        const done = $("dailyDoneInput").value.trim();
+        const di = Array.from(
+          document.querySelectorAll("#dayPills .week-pill"),
+        ).findIndex((p) => p.classList.contains("active"));
+        if (!done) {
+          toast("נא למלא מה עשית היום", "error");
+          return;
+        }
+        ctx.cur.dailyLogs[di].done = done;
+        try {
+          await apiPost("saveStudentDailyLog", {
+            username: currentUser.username,
+            weekIdx: ctx.wnum,
+            dayIdx: di,
+            done,
+          });
+          toast("יומן נשמר ✓");
+          renderDailyLog();
+        } catch (e) {
+          toast("שגיאה", "error");
+        }
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  STUDENT — MY SUBMISSIONS
+      // ══════════════════════════════════════════════════════
+      function renderMySubmissions() {
+        const s = studentsData[0];
+        if (!s) return;
+        const weeks = s.weeks || [],
+          cur = weeks.at(-1) || {},
+          locked = cur.locked === true;
+        $("mySubmissionsContent").innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:18px">
+    ${weeks
+      .map(
+        (w, i) => `<div class="card">
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+        <div class="card-title">שבוע ${w.weekNum || i + 1}</div>
+        ${i === weeks.length - 1 ? '<span class="badge badge-gold">נוכחי</span>' : '<span class="badge badge-muted">🔒 נעול</span>'}
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-bottom:10px">
+        ${scoreRingHTML(w.portfolioGrade, 100, "var(--accent2)", 58)}
+        ${scoreRingHTML(w.docGrade, 100, "var(--gold)", 58)}
+        ${scoreRingHTML(w.weeklyGrade, 100, "var(--green)", 58)}
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;font-size:10px;align-items:center">
+        <span style="color:var(--muted)">תיק:</span>${w.portfolioSubmitted ? '<span class="badge badge-green" style="font-size:9px">✓</span>' : '<span class="badge badge-red" style="font-size:9px">✗</span>'}
+        <span style="color:var(--muted);margin-right:4px">תיעוד:</span>${w.docSubmitted ? '<span class="badge badge-green" style="font-size:9px">✓</span>' : '<span class="badge badge-red" style="font-size:9px">✗</span>'}
+      </div>
+    </div>`,
+      )
+      .join("")}
+    </div>
+    ${
+      !locked
+        ? `<div class="grid-2">
+      <div class="card">
+        <div class="card-title">📁 הגשת תיק פרויקט</div>
+        <div class="info-banner mb-14" style="font-size:12px">יומיים לאחר הנחיה · WORD/PDF ב-Drive</div>
+        <div class="form-group"><label class="form-label">קישור (Google Drive / OneDrive)</label>
+          <input class="form-input" id="portfolioUrl" placeholder="https://drive.google.com/..." value="${cur.portfolioUrl || ""}"/></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+          <span class="badge ${cur.portfolioSubmitted ? "badge-green" : "badge-red"}">${cur.portfolioSubmitted ? "✓ הוגש" : "✗ לא הוגש"}</span>
+          <button class="btn btn-primary btn-sm" onclick="submitPortfolio()">הגשה ←</button>
+        </div>
+        ${cur.portfolioGrade != null ? `<div style="margin-top:10px;background:var(--surface);border-right:2px solid var(--accent);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:8px 12px;font-size:13px">ציון: <span class="font-mono" style="color:var(--accent2)">${cur.portfolioGrade}</span></div>` : ""}
+      </div>
+      <div class="card">
+        <div class="card-title">📋 הגשת תיעוד ביצוע</div>
+        <div class="info-banner mb-14" style="font-size:12px">5 ימים לאחר הנחיה</div>
+        <div class="form-group"><label class="form-label">קישור</label>
+          <input class="form-input" id="docUrl" placeholder="https://drive.google.com/..." value="${cur.docUrl || ""}"/></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+          <span class="badge ${cur.docSubmitted ? "badge-green" : "badge-red"}">${cur.docSubmitted ? "✓ הוגש" : "✗ לא הוגש"}</span>
+          <button class="btn btn-primary btn-sm" onclick="submitDoc()">הגשה ←</button>
+        </div>
+        ${cur.docGrade != null ? `<div style="margin-top:10px;background:var(--surface);border-right:2px solid var(--gold);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:8px 12px;font-size:13px">ציון: <span class="font-mono" style="color:var(--gold)">${cur.docGrade}</span></div>` : ""}
+      </div>
+    </div>`
+        : `<div class="info-banner" style="border-color:rgba(255,77,109,0.3);background:rgba(255,77,109,0.06)">🔒 <span>השבוע נעול — לא ניתן לעדכן הגשות</span></div>`
+    }`;
+      }
+      async function submitPortfolio() {
+        const url = $("portfolioUrl").value.trim();
+        if (!url) {
+          toast("הכניסי קישור", "error");
+          return;
+        }
+        const s = studentsData[0];
+        const wi = (s.weeks?.length || 1) - 1;
+        if (!s.weeks[wi]) return;
+        s.weeks[wi].portfolioUrl = url;
+        s.weeks[wi].portfolioSubmitted = true;
+        try {
+          await apiPost("saveWeek", {
+            studentId: s.id,
+            weekIdx: wi,
+            weekData: s.weeks[wi],
+          });
+          toast("תיק הפרויקט הוגש ✓");
+          renderMySubmissions();
+        } catch (e) {
+          toast("שגיאה", "error");
+        }
+      }
+      async function submitDoc() {
+        const url = $("docUrl").value.trim();
+        if (!url) {
+          toast("הכניסי קישור", "error");
+          return;
+        }
+        const s = studentsData[0];
+        const wi = (s.weeks?.length || 1) - 1;
+        if (!s.weeks[wi]) return;
+        s.weeks[wi].docUrl = url;
+        s.weeks[wi].docSubmitted = true;
+        try {
+          await apiPost("saveWeek", {
+            studentId: s.id,
+            weekIdx: wi,
+            weekData: s.weeks[wi],
+          });
+          toast("התיעוד הוגש ✓");
+          renderMySubmissions();
+        } catch (e) {
+          toast("שגיאה", "error");
+        }
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  STUDENT — HISTORY
+      // ══════════════════════════════════════════════════════
+      function renderHistory() {
+        const s = studentsData[0];
+        if (!s) return;
+        const weeks = s.weeks || [];
+        if (!weeks.length) {
+          $("historyContent").innerHTML =
+            '<div class="card"><p style="color:var(--muted);text-align:center;padding:24px">אין היסטוריה זמינה עדיין</p></div>';
+          return;
+        }
+        $("historyContent").innerHTML = `
+    <div class="info-banner mb-18">📅 <span>סה"כ ${weeks.length} שבועות · לחצי על שבוע לפרטים</span></div>
+    ${[...weeks]
+      .reverse()
+      .map((w, ri) => {
+        const i = weeks.length - 1 - ri,
+          isLast = i === weeks.length - 1;
+        const dl = (w.dailyLogs || []).filter(
+            (d) => d.grade != null && d.grade !== "",
+          ),
+          da = dl.length
+            ? Math.round(
+                (dl.reduce((a, b) => a + +b.grade, 0) / dl.length) * 10,
+              )
+            : null;
+        return `<div class="history-week">
+        <div class="history-week-hd" onclick="toggleHistoryWeek(${i})">
+          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+            <span class="badge badge-purple">שבוע ${w.weekNum || i + 1}</span>
+            ${isLast ? '<span class="badge badge-gold">שבוע נוכחי</span>' : ""}
+            ${w.locked ? '<span class="badge badge-muted">🔒</span>' : ""}
+            <span style="font-size:13px;font-weight:600">ציון: <span class="font-mono" style="color:${gradeColor(w.weeklyGrade)}">${w.weeklyGrade ?? "—"}</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:12px;color:var(--muted)">תיק: ${w.portfolioGrade ?? "—"} · תיעוד: ${w.docGrade ?? "—"}</span>
+            <span style="color:var(--muted)" id="hist-arrow-${i}">▼</span>
+          </div>
+        </div>
+        <div class="history-week-body" id="hist-body-${i}">
+          <div class="divider-gradient"></div>
+          <div class="grid-4 mb-14" style="text-align:center">
+            <div>${scoreRingHTML(da, 100, "var(--accent2)", 65)}<div style="font-size:10px;color:var(--muted);margin-top:4px">יומי ממוצע</div></div>
+            <div>${scoreRingHTML(w.portfolioGrade, 100, "var(--cyan)", 65)}<div style="font-size:10px;color:var(--muted);margin-top:4px">תיק פרויקט</div></div>
+            <div>${scoreRingHTML(w.docGrade, 100, "var(--gold)", 65)}<div style="font-size:10px;color:var(--muted);margin-top:4px">תיעוד</div></div>
+            <div>${scoreRingHTML(w.weeklyGrade, 100, "var(--green)", 65)}<div style="font-size:10px;color:var(--muted);margin-top:4px">ציון שבועי</div></div>
+          </div>
+          ${w.tasks ? `<div class="info-banner mb-14" style="font-size:12px">📋 ${w.tasks.split("\n").filter(Boolean).join(" · ")}</div>` : ""}
+          <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">יומן יומי</div>
+          ${(w.dailyLogs || [])
+            .map(
+              (log) => `<div class="day-row">
+            <div class="day-row-hd"><span class="day-name">${log.day}</span>
+              ${log.grade != null ? `<span class="font-mono" style="font-size:18px;font-weight:700;color:${gradeColor(log.grade * 10)}">${log.grade}/10</span>` : '<span style="color:var(--dim);font-size:12px">—</span>'}
+            </div>
+            <div style="font-size:13px;color:${log.done ? "var(--text2)" : "var(--dim)"};margin-bottom:${log.notes ? "8px" : "0"}">${log.done || "לא דווח"}</div>
+            ${log.notes ? `<div style="font-size:12px;color:var(--accent2);background:var(--bg);padding:6px 10px;border-radius:var(--r-sm);border-right:2px solid var(--accent)">💬 ${log.notes}</div>` : ""}
+          </div>`,
+            )
+            .join("")}
+        </div>
+      </div>`;
+      })
+      .join("")}`;
+      }
+      function toggleHistoryWeek(i) {
+        const b = $(`hist-body-${i}`),
+          a = $(`hist-arrow-${i}`),
+          h = b?.previousElementSibling;
+        b?.classList.toggle("show");
+        if (a) a.textContent = b?.classList.contains("show") ? "▲" : "▼";
+        if (h) h.classList.toggle("expanded", b?.classList.contains("show"));
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  ON LOAD
+      // ══════════════════════════════════════════════════════
+      window.addEventListener("load", () => {
+        setRole("student");
+        const savedUrl = localStorage.getItem("pf_url");
+        if (savedUrl) $("sheetUrl").value = savedUrl;
+        const session = localStorage.getItem("pf_session");
+        if (session) {
+          try {
+            const saved = JSON.parse(session);
+            currentUser = {
+              role: saved.role,
+              username: saved.username,
+              displayName: saved.displayName,
+              studentSheet: saved.studentSheet || null,
+            };
+            // SCRIPT_URL=saved.url||savedUrl||'';
+            if (SCRIPT_URL) {
+              initApp().catch(() => logout());
+              return;
+            }
+          } catch (e) {}
+        }
+      });
+      document.querySelectorAll(".modal-overlay").forEach((el) => {
+        el.addEventListener("click", (e) => {
+          if (e.target === el) el.classList.remove("open");
+        });
+      });
+    </script>
+  </body>
+</html>
