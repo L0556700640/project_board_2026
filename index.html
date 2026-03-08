@@ -1618,6 +1618,7 @@ tbody tr:hover td { background: var(--canvas); }
           </div>
 
           <div class="stats-row" id="teacherStats"></div>
+          <div id="instAveragesBlock" class="card mb-20" style="display:none"></div>
 
           <div class="card">
             <div class="card-header">
@@ -1632,7 +1633,8 @@ tbody tr:hover td { background: var(--canvas); }
                     <th>מוסד</th>
                     <th>נושא פרויקט</th>
                     <th>ציון שבועי</th>
-                    <th>סטטוס</th>
+                    <th>משוב היום</th>
+                    <th>זכאות הנחיה</th>
                     <th>פרטים</th>
                   </tr>
                 </thead>
@@ -1955,6 +1957,104 @@ tbody tr:hover td { background: var(--canvas); }
 // ============================================================
 //  CONFIG
 // ============================================================
+// ============================================================
+//  SECURITY — DevTools blocker + Login rate limiter
+// ============================================================
+
+// --- DevTools detection & blocking ---
+(function() {
+  const BLOCKED_MSG = 'כלי הפיתוח חסומים במערכת זו';
+
+  // Block F12 / Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+U
+  document.addEventListener('keydown', function(e) {
+    if (
+      e.key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && ['I','i','J','j','C','c'].includes(e.key)) ||
+      (e.ctrlKey && ['U','u'].includes(e.key))
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  }, true);
+
+  // Block right-click context menu
+  document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    return false;
+  }, true);
+
+  // Detect if DevTools is open (size-based heuristic) and blur the page
+  let devtoolsOpen = false;
+  function checkDevtools() {
+    const threshold = 160;
+    const widthDiff  = window.outerWidth  - window.innerWidth;
+    const heightDiff = window.outerHeight - window.innerHeight;
+    const isOpen = widthDiff > threshold || heightDiff > threshold;
+    if (isOpen && !devtoolsOpen) {
+      devtoolsOpen = true;
+      document.body.style.filter = 'blur(8px)';
+      document.body.style.pointerEvents = 'none';
+      document.body.style.userSelect = 'none';
+      // Show warning overlay
+      let ov = document.getElementById('devtools-warning');
+      if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'devtools-warning';
+        ov.style.cssText = `
+          position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;
+          background:rgba(13,17,23,0.97);display:flex;flex-direction:column;
+          align-items:center;justify-content:center;gap:16px;direction:rtl;
+        `;
+        ov.innerHTML = `
+          <div style="font-size:52px">🔒</div>
+          <div style="color:white;font-size:22px;font-weight:800;">\${BLOCKED_MSG}</div>
+          <div style="color:rgba(255,255,255,0.5);font-size:14px;">סגרי את כלי הפיתוח כדי להמשיך</div>
+        `;
+        document.body.appendChild(ov);
+      }
+      ov.style.display = 'flex';
+    } else if (!isOpen && devtoolsOpen) {
+      devtoolsOpen = false;
+      document.body.style.filter = '';
+      document.body.style.pointerEvents = '';
+      document.body.style.userSelect = '';
+      const ov = document.getElementById('devtools-warning');
+      if (ov) ov.style.display = 'none';
+    }
+  }
+  setInterval(checkDevtools, 500);
+})();
+
+// --- Login attempt rate limiter (client-side) ---
+const LOGIN_ATTEMPTS = { count: 0, lockedUntil: 0 };
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+function checkLoginRateLimit() {
+  const now = Date.now();
+  if (LOGIN_ATTEMPTS.lockedUntil > now) {
+    const remaining = Math.ceil((LOGIN_ATTEMPTS.lockedUntil - now) / 1000 / 60);
+    showAuthError(`יותר מדי ניסיונות. נסי שוב בעוד \${remaining} דקות`);
+    return false;
+  }
+  return true;
+}
+
+function recordFailedAttempt() {
+  LOGIN_ATTEMPTS.count++;
+  if (LOGIN_ATTEMPTS.count >= MAX_LOGIN_ATTEMPTS) {
+    LOGIN_ATTEMPTS.lockedUntil = Date.now() + LOCKOUT_MS;
+    LOGIN_ATTEMPTS.count = 0;
+    showAuthError('החשבון נחסם ל-5 דקות לאחר יותר מדי ניסיונות כושלים');
+  }
+}
+
+function resetLoginAttempts() {
+  LOGIN_ATTEMPTS.count = 0;
+  LOGIN_ATTEMPTS.lockedUntil = 0;
+}
+
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCu2y04mlMHo-_pmtVr8HeALWsylmH9p9IA5CDEOWd4PlI3JtwmQKSxkD6ybt8CkU/exec';
 
 // ============================================================
@@ -1962,12 +2062,14 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCu2y04mlMHo-_pmtVr
 // ============================================================
 let S = {
   user: null,
+  token: null,
   students: [],
   currentStudent: null,
   currentWeekIdx: 0,
   gradeCtx: null,
   pgCtx: null,
   wsCtx: null,
+  pollInterval: null,
 };
 
 // ============================================================
@@ -2052,62 +2154,6 @@ function updateClock() {
 setInterval(updateClock, 30000);
 
 // ============================================================
-//  INACTIVITY & SESSION MANAGER
-//  - Auto-logout after 30 min of no activity
-//  - Warning toast at 29 min
-//  - Silent token refresh every 20 min of activity
-// ============================================================
-const INACTIVITY_LIMIT   = 30 * 60 * 1000;  // 30 minutes
-const INACTIVITY_WARNING = 29 * 60 * 1000;  // warn at 29 min
-const TOKEN_REFRESH_INT  = 20 * 60 * 1000;  // refresh token every 20 min
-
-let _inactivityTimer  = null;
-let _warningTimer     = null;
-let _tokenRefreshTimer = null;
-let _inactivityActive = false;
-
-function resetInactivityTimer() {
-  if (!_inactivityActive) return;
-  clearTimeout(_inactivityTimer);
-  clearTimeout(_warningTimer);
-  _warningTimer = setTimeout(() => {
-    toast('⚠️ תצאי מהמערכת בעוד דקה בגלל חוסר פעילות', 'amber');
-  }, INACTIVITY_WARNING);
-  _inactivityTimer = setTimeout(() => {
-    toast('יצאת מהמערכת בגלל חוסר פעילות', 'error');
-    doLogout();
-  }, INACTIVITY_LIMIT);
-}
-
-function startInactivityWatch() {
-  _inactivityActive = true;
-  ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(evt => {
-    document.addEventListener(evt, resetInactivityTimer, { passive: true });
-  });
-  resetInactivityTimer();
-  // Silent token refresh
-  clearInterval(_tokenRefreshTimer);
-  _tokenRefreshTimer = setInterval(async () => {
-    if (!S.user || !S.token) return;
-    try {
-      const res = await apiPost('refreshToken', { callerUsername: S.user.username, token: S.token });
-      if (res && res.token) { S.token = res.token; }
-    } catch(e) { /* silent */ }
-  }, TOKEN_REFRESH_INT);
-}
-
-function stopInactivityWatch() {
-  _inactivityActive = false;
-  clearTimeout(_inactivityTimer);
-  clearTimeout(_warningTimer);
-  clearInterval(_tokenRefreshTimer);
-  ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(evt => {
-    document.removeEventListener(evt, resetInactivityTimer);
-  });
-}
-
-
-// ============================================================
 //  API
 // ============================================================
 async function api(action, params = {}) {
@@ -2120,10 +2166,38 @@ async function api(action, params = {}) {
   return res.json();
 }
 
+// Actions that mutate data and require a CSRF token
+const CSRF_ACTIONS = new Set([
+  'submitDailyFeedback','submitPortfolio','submitDocumentation',
+  'saveGrade','saveWeekScore','savePortfolioGrade',
+  'updateGuidanceDay','saveTasks','addStudent'
+]);
+
+async function fetchCsrfToken() {
+  if (!S.token) return null;
+  const params = new URLSearchParams({
+    action: 'getCsrfToken',
+    token: S.token,
+    callerUsername: S.user ? S.user.username : ''
+  });
+  try {
+    const res = await fetch(SCRIPT_URL + '?' + params.toString());
+    const data = await res.json();
+    return data.success ? data.csrf : null;
+  } catch(e) { return null; }
+}
+
 async function apiPost(action, data = {}) {
+  // Inject auth token for every request (except login itself)
   if (action !== 'login' && S.token) {
     data.token = S.token;
     data.callerUsername = S.user ? S.user.username : '';
+  }
+  // Fetch a fresh CSRF token for every mutating action
+  if (CSRF_ACTIONS.has(action)) {
+    const csrf = await fetchCsrfToken();
+    if (!csrf) { toast('שגיאת אבטחה — לא ניתן לאמת את הבקשה', 'error'); throw new Error('No CSRF token'); }
+    data.csrf = csrf;
   }
   const body = new URLSearchParams({ action, ...data }).toString();
   const res = await fetch(SCRIPT_URL, {
@@ -2144,16 +2218,46 @@ function switchAuthTab(tab) {
   });
 }
 
+
+// ============================================================
+//  DEVICE FINGERPRINT  (stable, privacy-safe browser hash)
+// ============================================================
+async function getDeviceFingerprint() {
+  // Build a string from stable browser properties
+  const raw = [
+    navigator.userAgent,
+    navigator.language,
+    screen.width + 'x' + screen.height + 'x' + screen.colorDepth,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    navigator.hardwareConcurrency || '',
+    navigator.platform || '',
+  ].join('|');
+
+  // Hash with SubtleCrypto (SHA-256) → hex string
+  try {
+    const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  } catch(_) {
+    // Fallback: simple non-crypto hash (good enough for fingerprinting)
+    let h = 0;
+    for (let i = 0; i < raw.length; i++) { h = Math.imul(31, h) + raw.charCodeAt(i) | 0; }
+    return 'fallback_' + Math.abs(h).toString(16);
+  }
+}
+
 async function doLogin() {
+  if (!checkLoginRateLimit()) return;
   const username = $('loginUser').value.trim();
   const password = $('loginPass').value.trim();
   if (!username || !password) { showAuthError('יש למלא שם משתמש וסיסמה'); return; }
 
   showLoading('מתחבר...');
   try {
-    const res = await api('login', { username, password });
+    const deviceFingerprint = await getDeviceFingerprint();
+    const res = await api('login', { username, password, deviceFingerprint });
     hideLoading();
     if (res.success) {
+      resetLoginAttempts();
       S.token = res.token;
       S.user = res.user;
       $('authScreen').style.display = 'none';
@@ -2161,6 +2265,7 @@ async function doLogin() {
       $('app').style.flexDirection = 'column';
       initApp();
     } else {
+      recordFailedAttempt();
       showAuthError('שם משתמש או סיסמה שגויים');
     }
   } catch(e) {
@@ -2177,13 +2282,21 @@ function showAuthError(msg) {
   setTimeout(() => el.style.display = 'none', 4000);
 }
 
-function doLogout() {
-  stopInactivityWatch();
+function doLogout(reason) {
+  stopStudentPolling();
   S = { user: null, token: null, students: [], currentStudent: null, currentWeekIdx: 0 };
-  $('authScreen').style.display = 'flex';
   $('app').style.display = 'none';
+  $('authScreen').style.display = 'flex';
   $('loginUser').value = '';
   $('loginPass').value = '';
+  if (reason) showAuthError(reason);
+}
+
+async function resetStudentDevice(username) {
+  if (!confirm('לאפס את המכשיר הרשום עבור ' + username + '?\nהתלמידה תוכל להתחבר ממכשיר חדש בכניסה הבאה.')) return;
+  const res = await apiPost('resetDevice', { username });
+  if (res.success) toast('המכשיר אופס — התלמידה תוכל להתחבר ממכשיר חדש', 'success');
+  else toast(res.error || 'שגיאה', 'error');
 }
 
 $('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
@@ -2192,7 +2305,6 @@ $('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin
 //  APP INIT
 // ============================================================
 function initApp() {
-  startInactivityWatch();
   const u = S.user;
   updateClock();
 
@@ -2251,6 +2363,38 @@ async function loadStudentDashboard() {
   }
 }
 
+// On page visibility change (tab switch / browser return) — re-fetch fresh data once
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && S.user && S.user.role !== 'teacher') {
+    try {
+      const res = await api('getStudentData', { username: S.user.username });
+      if (!res.success) return;
+      const newDataStr = JSON.stringify(res.data);
+      if (newDataStr === JSON.stringify(S.studentData)) return;
+      S.studentData = res.data;
+      renderStudentDashboard();
+      showSyncIndicator();
+    } catch(e) { /* silent */ }
+  }
+});
+
+function showSyncIndicator() {
+  let ind = document.getElementById('syncIndicator');
+  if (!ind) {
+    ind = document.createElement('div');
+    ind.id = 'syncIndicator';
+    ind.style.cssText = 'position:fixed;bottom:24px;left:24px;background:var(--green);color:white;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;direction:rtl';
+    ind.textContent = '✓ הנתונים עודכנו';
+    document.body.appendChild(ind);
+  }
+  ind.style.opacity = '1';
+  setTimeout(() => { ind.style.opacity = '0'; }, 2500);
+}
+
+// No-op stubs — polling removed, kept for safety if called elsewhere
+function startStudentPolling() {}
+function stopStudentPolling() { if (S.pollInterval) { clearInterval(S.pollInterval); S.pollInterval = null; } }
+
 function renderStudentDashboard() {
   const d = S.studentData;
   if (!d) return;
@@ -2282,6 +2426,15 @@ function renderStudentDashboard() {
     ? Math.round(prevWeeks.reduce((s,w) => s + (parseInt(w.finalScore)||0), 0) / prevWeeks.length)
     : null;
 
+  // Guidance eligibility calc for student view
+  const dayScoresArr = DAY_KEYS.map(dk => curWeek[dk] && curWeek[dk].score !== '' && curWeek[dk].score !== undefined ? parseFloat(curWeek[dk].score)*10 : null).filter(v=>v!==null);
+  const fbAvgPct = dayScoresArr.length ? Math.round(dayScoresArr.reduce((a,b)=>a+b,0)/dayScoresArr.length) : 0;
+  const docScorePct = parseFloat(curWeek.docScore) || 0;
+  const portScorePct = parseFloat(curWeek.portfolioScore) || 0;
+  const guidanceOk = fbAvgPct >= 70 && docScorePct >= 70;
+  const fbRemaining = Math.max(0, 70 - fbAvgPct);
+  const docRemaining = Math.max(0, 70 - docScorePct);
+
   $('studentStats').innerHTML = `
     <div class="stat">
       <div class="stat-accent-bar" style="background:${scoreColor(score)}"></div>
@@ -2290,22 +2443,22 @@ function renderStudentDashboard() {
       <div class="stat-change">${weeks.length} שבועות סה"כ</div>
     </div>
     <div class="stat">
-      <div class="stat-accent-bar" style="background:var(--accent)"></div>
-      <div class="stat-label">ממוצע כללי</div>
-      <div class="stat-value" style="color:${scoreColor(avgScore)}">${avgScore !== null ? avgScore : '—'}</div>
-      <div class="stat-change">שבועות קודמים</div>
+      <div class="stat-accent-bar" style="background:${scoreColor(fbAvgPct)}"></div>
+      <div class="stat-label">ממוצע משובים יומיים</div>
+      <div class="stat-value" style="color:${scoreColor(fbAvgPct)}">${dayScoresArr.length ? fbAvgPct : '—'}</div>
+      <div class="stat-change">${fbRemaining > 0 ? 'נדרש עוד ' + fbRemaining + ' לזכאות' : '✓ עומדת בדרישה'}</div>
     </div>
     <div class="stat">
-      <div class="stat-accent-bar" style="background:${curWeek.status === 'approved' ? 'var(--green)' : curWeek.status === 'rejected' ? 'var(--red)' : 'var(--amber)'}"></div>
-      <div class="stat-label">סטטוס הנחיה</div>
-      <div class="stat-value" style="font-size:16px;margin-top:4px">${statusBadge(curWeek.status || 'pending')}</div>
-      <div class="stat-change">מאושר מעל ציון 70</div>
+      <div class="stat-accent-bar" style="background:${scoreColor(docScorePct)}"></div>
+      <div class="stat-label">ציון תיעוד ביצוע</div>
+      <div class="stat-value" style="color:${scoreColor(docScorePct)}">${docScorePct || '—'}</div>
+      <div class="stat-change">${docRemaining > 0 ? 'נדרש עוד ' + docRemaining + ' לזכאות' : '✓ עומדת בדרישה'}</div>
     </div>
     <div class="stat">
-      <div class="stat-accent-bar" style="background:var(--green)"></div>
-      <div class="stat-label">משובים השבוע</div>
-      <div class="stat-value">${DAY_KEYS.filter(d => curWeek[d] && curWeek[d].feedback).length}/7</div>
-      <div class="stat-change">ימים שמולאו</div>
+      <div class="stat-accent-bar" style="background:${guidanceOk ? 'var(--green)' : 'var(--amber)'}"></div>
+      <div class="stat-label">זכאות להנחיה</div>
+      <div class="stat-value" style="font-size:15px;margin-top:4px">${guidanceOk ? '<span class="badge badge-green" style="font-size:14px">✓ זכאית</span>' : '<span class="badge badge-amber" style="font-size:14px">⏳ טרם זכאית</span>'}</div>
+      <div class="stat-change">${guidanceOk ? 'ניתן לגשת להנחיה השבוע' : 'משובים≥70 + תיעוד≥70'}</div>
     </div>
   `;
 
@@ -2355,9 +2508,11 @@ function renderStudentDashboard() {
   // History
   renderHistoryList(weeks);
 
-  // Pre-select today
+  // Lock to today only — student cannot submit for other days
   const todayIdx = new Date().getDay(); // 0=Sun
-  $('dailyDaySelect').value = `day${todayIdx + 1}`;
+  const todayDayEl = $('dailyDaySelect');
+  todayDayEl.value = `day${todayIdx + 1}`;
+  todayDayEl.disabled = true; // cannot change day
   $('dailyDate').value = new Date().toISOString().split('T')[0];
 }
 
@@ -2369,24 +2524,51 @@ function renderWeeklyChart(weeks) {
   const existing = Chart.getChart('weeklyChart');
   if (existing) existing.destroy();
   const ctx = $('weeklyChart').getContext('2d');
+  const labels = weeks.map((_, i) => `שבוע ${i+1}`);
   new Chart(ctx, {
     type: 'line',
     data: {
-      labels: weeks.map((_, i) => `שבוע ${i+1}`),
-      datasets: [{
-        data: weeks.map(w => parseInt(w.finalScore) || 0),
-        borderColor: '#1E6BFF',
-        backgroundColor: 'rgba(30,107,255,0.08)',
-        fill: true,
-        tension: 0.4,
-        borderWidth: 2.5,
-        pointBackgroundColor: '#1E6BFF',
-        pointRadius: 4,
-      }]
+      labels,
+      datasets: [
+        {
+          label: 'ציון סופי',
+          data: weeks.map(w => parseInt(w.finalScore) || 0),
+          borderColor: '#1E6BFF',
+          backgroundColor: 'rgba(30,107,255,0.06)',
+          fill: true, tension: 0.4, borderWidth: 2.5,
+          pointBackgroundColor: '#1E6BFF', pointRadius: 4,
+        },
+        {
+          label: 'משובים יומיים',
+          data: weeks.map(w => {
+            const sc = DAY_KEYS.map(dk => w[dk] && w[dk].score !== "" && w[dk].score !== undefined ? parseFloat(w[dk].score)*10 : null).filter(v=>v!==null);
+            return sc.length ? Math.round(sc.reduce((a,b)=>a+b,0)/sc.length) : 0;
+          }),
+          borderColor: '#00B37A',
+          backgroundColor: 'transparent',
+          tension: 0.4, borderWidth: 1.5,
+          pointRadius: 3, borderDash: [4,3],
+        },
+        {
+          label: 'תיעוד ביצוע',
+          data: weeks.map(w => parseInt(w.docScore) || 0),
+          borderColor: '#F59E0B',
+          backgroundColor: 'transparent',
+          tension: 0.4, borderWidth: 1.5,
+          pointRadius: 3, borderDash: [4,3],
+        },
+      ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: true, position: 'bottom', labels: { font: { size: 11, family: "'Heebo', sans-serif" }, padding: 12 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}`
+          }
+        }
+      },
       scales: {
         y: { min: 0, max: 100, grid: { color: '#F0F2F5' }, ticks: { font: { size: 11 } } },
         x: { grid: { display: false }, ticks: { font: { size: 11 } } }
@@ -2552,7 +2734,12 @@ function buildWeekDetailHTML(w, isTeacher) {
 //  STUDENT ACTIONS
 // ============================================================
 async function submitDailyFeedback() {
-  const day = $('dailyDaySelect').value;
+  // Lock: feedback must be for today only
+  const todayDayIdx = new Date().getDay(); // 0=Sun
+  const day = 'day' + (todayDayIdx + 1);
+  // Force today's day in the select
+  $('dailyDaySelect').value = day;
+
   const what = $('dailyWhat').value.trim();
   const points = $('dailyPoints').value.trim();
   const questions = $('dailyQuestions').value.trim();
@@ -2648,17 +2835,40 @@ function getCurWeek(s) {
   return weeks[weeks.length - 1] || {};
 }
 
+// ── Guidance eligibility: feedbacks avg ≥70 AND doc score ≥70
+function calcGuidanceEligibility(s) {
+  const w = getCurWeek(s);
+  const dayScores = DAY_KEYS.map(d => w[d] && w[d].score !== '' && w[d].score !== undefined ? parseFloat(w[d].score) : null).filter(v => v !== null);
+  const fbAvg = dayScores.length ? dayScores.reduce((a,b)=>a+b,0) / dayScores.length * 10 : 0; // day scores are 0-10, scale to 100
+  const docScore = parseFloat(w.docScore) || 0;
+  return { eligible: fbAvg >= 70 && docScore >= 70, fbAvg: Math.round(fbAvg), docScore };
+}
+
+// ── Auto-compute guidance status and update S.students cache (display only — teacher can override)
+function autoGuidanceStatus(s) {
+  const { eligible } = calcGuidanceEligibility(s);
+  return eligible ? 'approved' : 'pending';
+}
+
 function renderTeacherOverview() {
   const ss = S.students;
   const insts = getInstitutions().slice(1);
   const total = ss.length;
-  const approved = ss.filter(s => getCurWeek(s).status === 'approved').length;
+  const eligible = ss.filter(s => calcGuidanceEligibility(s).eligible).length;
   const pending = ss.filter(s => !getCurWeek(s).finalScore).length;
-  const avg = total ? Math.round(ss.reduce((s,st) => s + (parseInt(getCurWeek(st).finalScore)||0), 0) / total) : 0;
+  const avg = total ? Math.round(ss.reduce((sum,st) => sum + (parseInt(getCurWeek(st).finalScore)||0), 0) / total) : 0;
 
-  $('overviewDate').textContent = new Date().toLocaleDateString('he-IL', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  // Today's daily feedback avg
+  const todayDayKey = 'day' + (new Date().getDay() + 1);
+  const todayScores = ss.map(s => {
+    const fd = (getCurWeek(s)[todayDayKey] || {});
+    return fd.score !== undefined && fd.score !== '' ? parseFloat(fd.score) * 10 : null;
+  }).filter(v => v !== null);
+  const todayAvg = todayScores.length ? Math.round(todayScores.reduce((a,b)=>a+b,0)/todayScores.length) : null;
 
-  $('teacherStats').innerHTML = `
+  $("overviewDate").textContent = new Date().toLocaleDateString("he-IL", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+
+  $("teacherStats").innerHTML = `
     <div class="stat">
       <div class="stat-accent-bar" style="background:var(--accent)"></div>
       <div class="stat-label">סה"כ תלמידות</div>
@@ -2667,30 +2877,51 @@ function renderTeacherOverview() {
     </div>
     <div class="stat">
       <div class="stat-accent-bar" style="background:var(--green)"></div>
-      <div class="stat-label">מאושרות השבוע</div>
-      <div class="stat-value" style="color:var(--green)">${approved}</div>
-      <div class="stat-change">מתוך ${total}</div>
+      <div class="stat-label">זכאיות להנחיה</div>
+      <div class="stat-value" style="color:var(--green)">${eligible}</div>
+      <div class="stat-change">משובים≥70 + תיעוד≥70</div>
     </div>
     <div class="stat">
       <div class="stat-accent-bar" style="background:${scoreColor(avg)}"></div>
-      <div class="stat-label">ממוצע ציון</div>
-      <div class="stat-value" style="color:${scoreColor(avg)}">${avg || '—'}</div>
+      <div class="stat-label">ממוצע ציון שבועי</div>
+      <div class="stat-value" style="color:${scoreColor(avg)}">${avg || "—"}</div>
       <div class="stat-change">שבוע נוכחי</div>
     </div>
     <div class="stat">
-      <div class="stat-accent-bar" style="background:var(--amber)"></div>
-      <div class="stat-label">ממתינות לציון</div>
-      <div class="stat-value" style="color:var(--amber)">${pending}</div>
-      <div class="stat-change">ללא ציון שבועי</div>
+      <div class="stat-accent-bar" style="background:${todayAvg !== null ? scoreColor(todayAvg) : "var(--amber)"}"></div>
+      <div class="stat-label">ממוצע משוב יומי</div>
+      <div class="stat-value" style="color:${todayAvg !== null ? scoreColor(todayAvg) : "var(--amber)"}">${todayAvg !== null ? todayAvg : "—"}</div>
+      <div class="stat-change">היום</div>
     </div>
   `;
 
+  // Institution averages section
+  if (insts.length > 1) {
+    const instHtml = insts.map(inst => {
+      const grp = ss.filter(s => (s.institution||"ללא מוסד") === inst);
+      const instAvg = grp.length ? Math.round(grp.reduce((sum,st)=>sum+(parseInt(getCurWeek(st).finalScore)||0),0)/grp.length) : 0;
+      const instElig = grp.filter(s => calcGuidanceEligibility(s).eligible).length;
+      return `
+        <div class="stat" style="min-width:160px">
+          <div class="stat-accent-bar" style="background:${scoreColor(instAvg)}"></div>
+          <div class="stat-label">${inst}</div>
+          <div class="stat-value" style="color:${scoreColor(instAvg)}">${instAvg||"—"}</div>
+          <div class="stat-change">${grp.length} תלמידות | ${instElig} זכאיות</div>
+        </div>
+      `;
+    }).join("");
+    const instBlock = $("instAveragesBlock");
+    if (instBlock) {
+      instBlock.innerHTML = `<div class="card-title mb-12">ממוצעים לפי מוסד</div><div class="stats-row" style="flex-wrap:wrap">${instHtml}</div>`;
+      instBlock.style.display = "block";
+    }
+  }
+
   // Institution filter chips for overview
-  let activeInst = 'הכל';
-  const instEl = $('overviewInstFilter');
+  const instEl = $("overviewInstFilter");
   instEl.innerHTML = getInstitutions().map(inst => `
-    <span class="inst-chip ${inst==='הכל'?'active':''}" onclick="filterOverviewTable('${inst}', this)">${inst}</span>
-  `).join('');
+    <span class="inst-chip ${inst==="הכל"?"active":""}" onclick="filterOverviewTable('${inst}', this)">${inst}</span>
+  `).join("");
 
   renderOverviewTable(ss);
 }
@@ -2705,17 +2936,26 @@ function filterOverviewTable(inst, chip) {
 function renderOverviewTable(students) {
   $('overviewTable').innerHTML = students.map(s => {
     const w = getCurWeek(s);
+    const { eligible, fbAvg, docScore } = calcGuidanceEligibility(s);
+    const guidanceBadge = eligible
+      ? '<span class="badge badge-green">✓ זכאית</span>'
+      : `<span class="badge badge-amber" title="משובים: ${fbAvg} | תיעוד: ${docScore}">⏳ ממתינה</span>`;
+    // day scores for today
+    const todayDayKey = 'day' + (new Date().getDay() + 1);
+    const todayFd = w[todayDayKey] || {};
+    const todayScore = todayFd.score !== undefined && todayFd.score !== '' ? todayFd.score * 10 : null;
     return `
       <tr>
         <td><strong>${s.name}</strong></td>
         <td><span class="badge badge-neutral">${s.institution||'—'}</span></td>
         <td style="color:var(--ink-60)">${s.topic||'—'}</td>
         <td><span style="font-weight:800;color:${scoreColor(w.finalScore)}">${w.finalScore||'—'}</span></td>
-        <td>${statusBadge(w.status||'pending')}</td>
+        <td><span style="font-size:12px;color:${todayScore!==null?scoreColor(todayScore):'var(--ink-30)'}">${todayScore!==null?todayScore:'—'}</span></td>
+        <td>${guidanceBadge}</td>
         <td><button class="btn btn-ghost btn-xs" onclick="openStudentDetail('${s.username}')">פרטים →</button></td>
       </tr>
     `;
-  }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--ink-30);padding:24px">אין תלמידות</td></tr>';
+  }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--ink-30);padding:24px">אין תלמידות</td></tr>';
 }
 
 function renderStudentsList() {
@@ -3182,6 +3422,91 @@ async function saveTasks() {
 }
 
 // Close modal on overlay click
+
+// ============================================================
+//  SECURITY: DevTools Detection + Periodic Server Role Check
+// ============================================================
+
+// --- DevTools Detection ---
+// Detects opening of DevTools via multiple methods and forces logout.
+// Not 100% foolproof for experts, but stops casual console manipulation.
+(function() {
+  const THRESHOLD = 160; // pixels — DevTools panel usually wider/taller than this
+
+  function isDevToolsOpen() {
+    return (window.outerWidth  - window.innerWidth  > THRESHOLD) ||
+           (window.outerHeight - window.innerHeight > THRESHOLD);
+  }
+
+  // Method 1: size-based detection
+  function sizeCheck() {
+    if (!S.user) return; // not logged in — don't bother
+    if (isDevToolsOpen()) {
+      if (S.user.role !== 'teacher') {
+        doLogout('זוהה שימוש בכלי פיתוח — החיבור נותק');
+      }
+    }
+  }
+  // sizeCheck disabled — too many false positives on mobile/small screens
+  // setInterval(sizeCheck, 1500);
+
+  // Method 2: debugger timing removed — caused false logouts due to slow JS engines on mobile
+
+  // Method 3: console.log object getter trick
+  let devToolsViaConsole = false;
+  const img = new Image();
+  Object.defineProperty(img, 'id', {
+    get: function() {
+      devToolsViaConsole = true;
+    }
+  });
+  setInterval(function() {
+    devToolsViaConsole = false;
+    console.log('%c', img); // triggers getter only when DevTools console is open
+    setTimeout(function() {
+      if (devToolsViaConsole && S.user && S.user.role !== 'teacher') {
+        // Just blur — don't logout, devtools detection is unreliable
+        document.body.style.filter = 'blur(8px)';
+        document.body.style.pointerEvents = 'none';
+      }
+    }, 100);
+  }, 3000);
+
+  // Method 4: Disable right-click for non-teachers
+  document.addEventListener('contextmenu', function(e) {
+    if (!S.user || S.user.role === 'teacher') return;
+    e.preventDefault();
+  });
+
+  // Method 5: Block common DevTools keyboard shortcuts for non-teachers
+  document.addEventListener('keydown', function(e) {
+    if (!S.user || S.user.role === 'teacher') return;
+    const k = e.key;
+    const ctrl = e.ctrlKey || e.metaKey;
+    // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U (view source)
+    if (
+      k === 'F12' ||
+      (ctrl && e.shiftKey && (k === 'I' || k === 'i' || k === 'J' || k === 'j' || k === 'C' || k === 'c')) ||
+      (ctrl && (k === 'U' || k === 'u'))
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+})();
+
+// --- Periodic Server-Side Role Verification ---
+// Every 2 minutes, ask the server "who am I really?" and log out if tampered.
+setInterval(async function() {
+  if (!S.user || !S.token) return;
+  try {
+    const rv = await apiPost('verifyRole', {});
+    if (!rv.success || rv.role !== S.user.role || rv.username !== S.user.username) {
+      doLogout('נותק עקב שינוי פרטי משתמש לא מורשה');
+    }
+  } catch(e) { /* network hiccup — don't logout, try again next interval */ }
+}, 8 * 60 * 1000);
+
 document.querySelectorAll('.overlay').forEach(ov => {
   ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
 });
