@@ -1214,6 +1214,22 @@ tbody tr:hover td { background: var(--canvas); }
   .score-row { grid-template-columns: 1fr; }
 }
 
+/* ====== ANALYTICS SELECT ====== */
+.analytics-select {
+  padding: 8px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-family: var(--font);
+  direction: rtl;
+  outline: none;
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+  min-width: 160px;
+}
+.analytics-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30,107,255,0.08); }
+
 /* ====== MISC UTILITIES ====== */
 .flex { display: flex; align-items: center; }
 .flex-between { display: flex; align-items: center; justify-content: space-between; }
@@ -1388,7 +1404,30 @@ tbody tr:hover td { background: var(--canvas); }
           <!-- Stats -->
           <div class="stats-row" id="studentStats"></div>
 
-          <!-- Charts -->
+          <!-- Charts Row 1: Daily Feedback + Guidance Eligibility -->
+          <div class="charts-row" style="margin-bottom:16px">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">📈 משוב יומי — שבוע נוכחי</div>
+                  <div class="card-subtitle">ציון לכל יום (0–10)</div>
+                </div>
+              </div>
+              <div class="chart-wrap" style="height:220px"><canvas id="dailyFeedbackChart"></canvas></div>
+            </div>
+            <div class="card" id="guidanceEligCard">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">🎯 זכאות להנחיה</div>
+                  <div class="card-subtitle">יעד: 70 בכל מדד</div>
+                </div>
+                <span id="guidanceEligBadgeBig"></span>
+              </div>
+              <div id="guidanceGauges"></div>
+            </div>
+          </div>
+
+          <!-- Charts Row 2: Weekly trend + Components -->
           <div class="charts-row">
             <div class="card">
               <div class="card-header">
@@ -1619,6 +1658,9 @@ tbody tr:hover td { background: var(--canvas); }
 
           <div class="stats-row" id="teacherStats"></div>
           <div id="instAveragesBlock" class="card mb-20" style="display:none"></div>
+          <!-- Daily Feedback Summary -->
+          <div id="dailyFeedbackSummary" class="card mb-20" style="display:none"></div>
+
 
           <div class="card">
             <div class="card-header">
@@ -1729,8 +1771,71 @@ tbody tr:hover td { background: var(--canvas); }
         </div>
       </div>
 
-    </div><!-- /content -->
-  </div><!-- /app-body -->
+      <!-- Teacher Analytics Page -->
+      <div class="page" id="page-t-analytics">
+        <div class="content-inner">
+          <div class="page-header">
+            <div>
+              <div class="page-title">📊 ניתוחים כיתתיים</div>
+              <div class="page-subtitle">ממוצעים, גרפים ופילוחים — ללא נתוני תלמידה בודדת</div>
+            </div>
+            <div class="flex gap-8">
+              <select id="analyticsInstFilter" class="analytics-select" onchange="renderAnalytics()">
+                <option value="הכל">כל המוסדות</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Stat summary -->
+          <div class="stats-row" id="analyticsStats"></div>
+
+          <!-- Charts row: daily avg + eligibility dist -->
+          <div class="charts-row" style="margin-bottom:16px">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">📈 ממוצע משוב יומי — שבוע נוכחי</div>
+                  <div class="card-subtitle">ממוצע כיתתי לפי יום</div>
+                </div>
+              </div>
+              <div class="chart-wrap" style="height:240px"><canvas id="teacherDailyChart"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">🎯 זכאות להנחיה — כיתה</div>
+                  <div class="card-subtitle">ממוצע משובים + ביצוע</div>
+                </div>
+              </div>
+              <div id="teacherGuidanceGauges" style="padding:8px 0"></div>
+            </div>
+          </div>
+
+          <!-- Student breakdown chart -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">👩‍🎓 פילוח תלמידות — זכאות הנחיה</div>
+                <div class="card-subtitle">השוואה בין כל הבנות בכיתה</div>
+              </div>
+            </div>
+            <div class="chart-wrap" style="height:320px"><canvas id="studentBreakdownChart"></canvas></div>
+          </div>
+
+          <!-- Weekly trend class avg -->
+          <div class="card" style="margin-top:16px">
+            <div class="card-header">
+              <div>
+                <div class="card-title">📅 ממוצע ציון שבועי — מגמה כיתתית</div>
+                <div class="card-subtitle">לאורך כל השבועות</div>
+              </div>
+            </div>
+            <div class="chart-wrap" style="height:220px"><canvas id="teacherWeeklyTrendChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+
 </div><!-- /app -->
 
 <!-- ============================================================
@@ -2076,7 +2181,7 @@ let S = {
 //  UTILITIES
 // ============================================================
 const $ = id => document.getElementById(id);
-const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; };
+const mkEl = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; };
 
 function showLoading(msg = 'טוען...') {
   $('loadingMsg').textContent = msg;
@@ -2085,7 +2190,7 @@ function showLoading(msg = 'טוען...') {
 function hideLoading() { $('loadingScreen').classList.remove('show'); }
 
 function toast(msg, type = '') {
-  const t = el('div', 'toast ' + type, (type==='success'?'✓ ':type==='error'?'✗ ':'')+msg);
+  const t = mkEl('div', 'toast ' + type, (type==='success'?'✓ ':type==='error'?'✗ ':'')+msg);
   $('toasts').appendChild(t);
   setTimeout(() => { t.style.opacity='0'; t.style.transform='translateY(8px)'; t.style.transition='all 0.3s'; setTimeout(()=>t.remove(),300); }, 3200);
 }
@@ -2317,6 +2422,7 @@ function initApp() {
     buildSidebar([
       { page: 'page-t-overview',  icon: '📊', label: 'סקירה כללית' },
       { page: 'page-t-students',  icon: '👩‍🎓', label: 'תלמידות' },
+      { page: 'page-t-analytics', icon: '📈', label: 'ניתוחים כיתתיים' },
       { page: 'page-t-portfolios',icon: '📁', label: 'תיקי פרויקט' },
       { page: 'page-t-feedbacks', icon: '📝', label: 'משובים' },
       { page: 'page-t-docs',      icon: '📋', label: 'תיעודים' },
@@ -2431,9 +2537,10 @@ function renderStudentDashboard() {
   const fbAvgPct = dayScoresArr.length ? Math.round(dayScoresArr.reduce((a,b)=>a+b,0)/dayScoresArr.length) : 0;
   const docScorePct = parseFloat(curWeek.docScore) || 0;
   const portScorePct = parseFloat(curWeek.portfolioScore) || 0;
-  const guidanceOk = fbAvgPct >= 70 && docScorePct >= 70;
+  const guidanceOk = fbAvgPct >= 70 && ((portScorePct + docScorePct) / 2) >= 70;
+  const execAvgPct = Math.round((portScorePct + docScorePct) / 2);
   const fbRemaining = Math.max(0, 70 - fbAvgPct);
-  const docRemaining = Math.max(0, 70 - docScorePct);
+  const execRemaining = Math.max(0, 70 - execAvgPct);
 
   $('studentStats').innerHTML = `
     <div class="stat">
@@ -2449,22 +2556,24 @@ function renderStudentDashboard() {
       <div class="stat-change">${fbRemaining > 0 ? 'נדרש עוד ' + fbRemaining + ' לזכאות' : '✓ עומדת בדרישה'}</div>
     </div>
     <div class="stat">
-      <div class="stat-accent-bar" style="background:${scoreColor(docScorePct)}"></div>
-      <div class="stat-label">ציון תיעוד ביצוע</div>
-      <div class="stat-value" style="color:${scoreColor(docScorePct)}">${docScorePct || '—'}</div>
-      <div class="stat-change">${docRemaining > 0 ? 'נדרש עוד ' + docRemaining + ' לזכאות' : '✓ עומדת בדרישה'}</div>
+      <div class="stat-accent-bar" style="background:${scoreColor(execAvgPct)}"></div>
+      <div class="stat-label">ממוצע ביצוע (תיק + תיעוד)</div>
+      <div class="stat-value" style="color:${scoreColor(execAvgPct)}">${execAvgPct || '—'}</div>
+      <div class="stat-change">${execRemaining > 0 ? 'נדרש עוד ' + execRemaining + ' לזכאות' : '✓ עומדת בדרישה'}</div>
     </div>
     <div class="stat">
       <div class="stat-accent-bar" style="background:${guidanceOk ? 'var(--green)' : 'var(--amber)'}"></div>
       <div class="stat-label">זכאות להנחיה</div>
       <div class="stat-value" style="font-size:15px;margin-top:4px">${guidanceOk ? '<span class="badge badge-green" style="font-size:14px">✓ זכאית</span>' : '<span class="badge badge-amber" style="font-size:14px">⏳ טרם זכאית</span>'}</div>
-      <div class="stat-change">${guidanceOk ? 'ניתן לגשת להנחיה השבוע' : 'משובים≥70 + תיעוד≥70'}</div>
+      <div class="stat-change">${guidanceOk ? 'ניתן לגשת להנחיה השבוע' : 'משובים≥70 + ממוצע ביצוע≥70'}</div>
     </div>
   `;
 
   // Charts
   renderWeeklyChart(weeks);
   renderComponentChart(curWeek);
+  renderDailyFeedbackChart(curWeek);
+  renderGuidanceGauges(fbAvgPct, docScorePct, portScorePct, 'guidanceGauges');
 
   // Day grid
   renderDayGrid(curWeek, 'weekDayGrid');
@@ -2597,6 +2706,118 @@ function renderComponentChart(w) {
       cutout: '68%',
     }
   });
+}
+
+function renderDailyFeedbackChart(curWeek) {
+  const existing = Chart.getChart('dailyFeedbackChart');
+  if (existing) existing.destroy();
+  const ctx = $('dailyFeedbackChart');
+  if (!ctx) return;
+
+  const dayLabels = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','שבת'];
+  const data = DAY_KEYS.map(dk => {
+    const sc = curWeek[dk] && curWeek[dk].score !== '' && curWeek[dk].score !== undefined
+      ? parseFloat(curWeek[dk].score) : null;
+    return sc;
+  });
+  const hasData = data.some(v => v !== null);
+  const filled = data.map(v => v !== null ? v : undefined);
+  const colors = data.map(v => {
+    if (v === null) return 'rgba(155,163,180,0.3)';
+    if (v >= 8) return 'rgba(0,179,122,0.9)';
+    if (v >= 5) return 'rgba(30,107,255,0.85)';
+    return 'rgba(229,57,53,0.85)';
+  });
+
+  new Chart(ctx.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: dayLabels,
+      datasets: [{
+        label: 'ציון יומי',
+        data: data.map(v => v !== null ? v : 0),
+        backgroundColor: colors,
+        borderRadius: 8,
+        borderSkipped: false,
+      }, {
+        label: 'ממוצע שבועי',
+        data: (() => {
+          const vals = data.filter(v => v !== null);
+          const avg = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+          return avg !== null ? Array(7).fill(avg) : [];
+        })(),
+        type: 'line',
+        borderColor: 'rgba(245,158,11,0.8)',
+        borderWidth: 2,
+        borderDash: [5,4],
+        pointRadius: 0,
+        fill: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'bottom', labels: { font: { size: 11 }, padding: 10 } },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y !== undefined ? c.parsed.y.toFixed(1) : '—'}` } }
+      },
+      scales: {
+        y: { min: 0, max: 10, grid: { color: '#F0F2F5' }, ticks: { font: { size: 11 }, stepSize: 2 } },
+        x: { grid: { display: false }, ticks: { font: { size: 12 } } }
+      }
+    }
+  });
+}
+
+function renderGuidanceGauges(fbAvgPct, docScorePct, portScorePct, containerId) {
+  const el = $(containerId);
+  if (!el) return;
+  const TARGET = 70;
+  const execScore = Math.round(((parseFloat(portScorePct)||0) + (parseFloat(docScorePct)||0)) / 2);
+
+  function gauge(label, value, suffix, emoji) {
+    const pct = Math.min(100, Math.max(0, value));
+    const passed = pct >= TARGET;
+    const fillColor = passed ? 'var(--green)' : (pct >= 50 ? 'var(--accent)' : 'var(--red)');
+    const gapPct = Math.max(0, TARGET - pct);
+    const remaining = Math.max(0, Math.round(TARGET - pct));
+    return `
+      <div style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:13px;font-weight:700;color:var(--ink)">${emoji} ${label}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:22px;font-weight:900;color:${fillColor}">${pct}<span style="font-size:13px">${suffix}</span></span>
+            ${passed
+              ? '<span class="badge badge-green" style="font-size:11px">✓ עברה</span>'
+              : `<span class="badge badge-amber" style="font-size:11px">עוד ${remaining}</span>`}
+          </div>
+        </div>
+        <div style="position:relative;height:22px;background:var(--ink-10);border-radius:99px;overflow:hidden">
+          <div style="position:absolute;top:0;right:0;height:100%;width:${pct}%;background:${fillColor};border-radius:99px;transition:width 0.6s ease"></div>
+          <div style="position:absolute;top:0;right:${TARGET}%;width:2.5px;height:100%;background:rgba(13,17,23,0.35);z-index:2" title="יעד: ${TARGET}"></div>
+          <div style="position:absolute;top:50%;transform:translateY(-50%);right:${TARGET + 1}%;font-size:9px;font-weight:800;color:rgba(13,17,23,0.4);z-index:3">יעד</div>
+        </div>
+      </div>
+    `;
+  }
+
+  const fbOk = fbAvgPct >= TARGET;
+  const execOk = execScore >= TARGET;
+  const bothOk = fbOk && execOk;
+
+  el.innerHTML = `
+    <div style="padding:4px 0">
+      ${gauge('ממוצע משובים יומיים', fbAvgPct, '', '📝')}
+      ${gauge('ממוצע ביצוע (תיק + תיעוד)', execScore, '', '📁')}
+      <div style="margin-top:8px;padding:12px 14px;border-radius:var(--radius);background:${bothOk ? 'var(--green-lt)' : 'var(--amber-lt)'};border:1px solid ${bothOk ? 'rgba(0,179,122,0.25)' : 'rgba(245,158,11,0.3)'}">
+        <span style="font-size:13px;font-weight:700;color:${bothOk ? 'var(--green)' : '#B45309'}">
+          ${bothOk ? '🎉 זכאית להנחיה!' : '⏳ טרם זכאית — שני המדדים צריכים להגיע ל-70'}
+        </span>
+      </div>
+    </div>
+  `;
+  $('guidanceEligBadgeBig') && ($('guidanceEligBadgeBig').innerHTML = bothOk
+    ? '<span class="badge badge-green">✓ זכאית</span>'
+    : '<span class="badge badge-amber">⏳ ממתינה</span>');
 }
 
 function renderDayGrid(weekData, containerId) {
@@ -2804,6 +3025,7 @@ async function loadTeacherDashboard() {
     renderAllPortfolios();
     renderAllFeedbacks();
     renderAllDocs();
+    renderAnalytics();
     showPage('page-t-overview');
   } catch(e) { hideLoading(); toast('שגיאת תקשורת', 'error'); console.error(e); }
 }
@@ -2830,6 +3052,12 @@ function filterByInst(containerId, inst) {
   });
 }
 
+function filterInst(chip, inst, containerId, filterFn) {
+  document.querySelectorAll('#' + containerId + ' .inst-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  if (typeof filterFn === 'function') filterFn(inst);
+}
+
 function getCurWeek(s) {
   const weeks = s.weeks || [];
   return weeks[weeks.length - 1] || {};
@@ -2839,9 +3067,12 @@ function getCurWeek(s) {
 function calcGuidanceEligibility(s) {
   const w = getCurWeek(s);
   const dayScores = DAY_KEYS.map(d => w[d] && w[d].score !== '' && w[d].score !== undefined ? parseFloat(w[d].score) : null).filter(v => v !== null);
-  const fbAvg = dayScores.length ? dayScores.reduce((a,b)=>a+b,0) / dayScores.length * 10 : 0; // day scores are 0-10, scale to 100
-  const docScore = parseFloat(w.docScore) || 0;
-  return { eligible: fbAvg >= 70 && docScore >= 70, fbAvg: Math.round(fbAvg), docScore };
+  const fbAvg = dayScores.length ? dayScores.reduce((a,b)=>a+b,0) / dayScores.length * 10 : 0; // 0-10 → 0-100
+  const execScores = [w.portfolioScore, w.docScore]
+    .map(v => (v !== undefined && v !== '' && v !== null) ? parseFloat(v) : null)
+    .filter(v => v !== null && v > 0);
+  const execAvg = execScores.length ? execScores.reduce((a,b)=>a+b,0) / execScores.length : 0;
+  return { eligible: fbAvg >= 70 && execAvg >= 70, fbAvg: Math.round(fbAvg), execAvg: Math.round(execAvg) };
 }
 
 // ── Auto-compute guidance status and update S.students cache (display only — teacher can override)
@@ -2849,6 +3080,190 @@ function autoGuidanceStatus(s) {
   const { eligible } = calcGuidanceEligibility(s);
   return eligible ? 'approved' : 'pending';
 }
+
+// ── Daily Feedback Navigator state ──
+// Tracks which (weekIdx, dayKey) the teacher is viewing
+let _fbNav = null; // { weekIdx, dayKey } — null = today
+
+function _fbNavInit(students) {
+  if (_fbNav !== null) return; // already set
+  const todayJsDay = new Date().getDay(); // 0=Sun
+  _fbNav = { weekIdx: -1, dayKey: 'day' + (todayJsDay + 1) }; // -1 = last week (current)
+}
+
+// Returns { weekIdx, dayKey, label, canGoBack, canGoForward }
+// weekIdx: -1 = current week (last in array), -2 = one before, etc.
+// dayKey: 'day1'..'day7'
+function _fbNavInfo(students) {
+  _fbNavInit(students);
+  const DAY_NAMES_FULL = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  // day1=ראשון(idx0)..day7=שבת(idx6)
+  const dayIdx = parseInt(_fbNav.dayKey.replace('day','')) - 1; // 0-6
+  const dayName = DAY_NAMES_FULL[dayIdx];
+
+  // Resolve weekIdx relative to students[0].weeks length
+  const maxWeeks = Math.max(...students.map(s => (s.weeks||[]).length), 1);
+  const absWeekIdx = _fbNav.weekIdx === -1
+    ? maxWeeks - 1
+    : maxWeeks - 1 + _fbNav.weekIdx + 1; // -2 → maxWeeks-2, etc.
+  const weekNum = absWeekIdx + 1;
+
+  const isToday = _fbNav.weekIdx === -1 && _fbNav.dayKey === 'day' + (new Date().getDay() + 1);
+  const label = isToday ? `היום (יום ${dayName}, שבוע ${weekNum})` : `יום ${dayName} — שבוע ${weekNum}`;
+
+  // canGoBack: true if there's an earlier slot
+  // canGoForward: true if not at today
+  const canGoForward = !isToday;
+
+  // Earliest possible: day1 of week 1
+  const canGoBack = !(absWeekIdx === 0 && dayIdx === 0);
+
+  return { absWeekIdx, dayKey: _fbNav.dayKey, dayIdx, dayName, weekNum, label, canGoBack, canGoForward, isToday };
+}
+
+function _fbNavMove(delta, students) {
+  // delta: -1 = back, +1 = forward
+  const DAY_ORDER = ['day1','day2','day3','day4','day5','day6','day7'];
+  const maxWeeks = Math.max(...students.map(s => (s.weeks||[]).length), 1);
+
+  let dayIdx = parseInt(_fbNav.dayKey.replace('day','')) - 1;
+  let absWeekIdx = _fbNav.weekIdx === -1
+    ? maxWeeks - 1
+    : maxWeeks - 1 + _fbNav.weekIdx + 1;
+
+  if (delta === -1) {
+    // go back
+    if (dayIdx > 0) {
+      dayIdx--;
+    } else if (absWeekIdx > 0) {
+      absWeekIdx--;
+      dayIdx = 6; // last day of previous week = שבת
+    }
+  } else {
+    // go forward
+    const todayDayIdx = new Date().getDay(); // 0=Sun
+    const isLastWeek = absWeekIdx === maxWeeks - 1;
+    if (dayIdx < 6 && !(isLastWeek && dayIdx >= todayDayIdx)) {
+      dayIdx++;
+    } else if (!isLastWeek) {
+      absWeekIdx++;
+      dayIdx = 0;
+    }
+  }
+
+  _fbNav = {
+    weekIdx: absWeekIdx - (maxWeeks - 1), // back to relative (-1 = last, -2 = before, etc.)
+    dayKey: DAY_ORDER[dayIdx]
+  };
+  // Clamp weekIdx to -1 for current week
+  if (_fbNav.weekIdx === 0) _fbNav.weekIdx = -1;
+}
+
+function renderDailyFeedbackSummary(students, resetNav) {
+  const block = $('dailyFeedbackSummary');
+  if (!block) return;
+
+  if (resetNav) _fbNav = null;
+  _fbNavInit(students);
+
+  const info = _fbNavInfo(students);
+  const { absWeekIdx, dayKey, dayName, weekNum, label, canGoBack, canGoForward, isToday } = info;
+
+  // Collect feedback for the selected day across all students
+  function hasFeedback(s) {
+    const weeks = s.weeks || [];
+    const w = weeks[absWeekIdx] || {};
+    const fd = w[dayKey] || {};
+    return fd.feedback && String(fd.feedback).trim() !== '' && fd.feedback !== '[אוטומטי - לא דווח]';
+  }
+
+  const total     = students.length;
+  const submitted = students.filter(hasFeedback).length;
+  const pct       = total ? Math.round(submitted / total * 100) : 0;
+  const fillColor = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--accent)' : 'var(--amber)';
+
+  // Per-institution breakdown
+  const insts = [...new Set(students.map(s => s.institution || 'ללא מוסד'))].sort();
+  const instRows = insts.map(inst => {
+    const grp      = students.filter(s => (s.institution || 'ללא מוסד') === inst);
+    const grpTotal = grp.length;
+    const grpDone  = grp.filter(hasFeedback).length;
+    const grpPct   = grpTotal ? Math.round(grpDone / grpTotal * 100) : 0;
+    const grpColor = grpPct >= 80 ? 'var(--green)' : grpPct >= 50 ? 'var(--accent)' : 'var(--amber)';
+    const missing  = grpTotal - grpDone;
+    const missingNames = grp
+      .filter(s => !hasFeedback(s))
+      .map(s => s.name.split(' ')[0])
+      .join(', ');
+
+    return `
+      <div style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:13px;font-weight:700;color:var(--ink)">${inst}</span>
+            <span style="font-size:12px;color:var(--ink-60)">${grpDone}/${grpTotal} הגישו</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:18px;font-weight:900;color:${grpColor}">${grpPct}%</span>
+            ${missing > 0
+              ? `<span class="badge badge-amber" style="font-size:11px" title="חסרות: ${missingNames}">${missing} חסרות</span>`
+              : '<span class="badge badge-green" style="font-size:11px">✓ הכל</span>'}
+          </div>
+        </div>
+        <div style="position:relative;height:14px;background:var(--ink-10);border-radius:99px;overflow:hidden">
+          <div style="position:absolute;top:0;right:0;height:100%;width:${grpPct}%;background:${grpColor};border-radius:99px;transition:width 0.5s ease"></div>
+        </div>
+        ${missing > 0 && missingNames
+          ? `<div style="margin-top:4px;font-size:11px;color:var(--ink-40);text-align:right">חסרות: ${missingNames}</div>`
+          : ''}
+      </div>
+    `;
+  }).join('');
+
+  block.style.display = 'block';
+  block.innerHTML = `
+    <div class="card-header" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="card-title" style="margin:0">📝 משובים יומיים</div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <button
+            onclick="event.stopPropagation();_fbNavMove(-1,S.students);renderDailyFeedbackSummary(S.students)"
+            style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);background:var(--canvas);cursor:${canGoBack?'pointer':'not-allowed'};opacity:${canGoBack?1:0.35};font-size:15px;display:flex;align-items:center;justify-content:center;transition:all 0.15s"
+            ${canGoBack?'':'disabled'}
+            title="יום קודם">‹</button>
+          <div style="padding:4px 14px;background:var(--ink-05,#f5f5f5);border-radius:20px;font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;min-width:170px;text-align:center">
+            ${label}
+          </div>
+          <button
+            onclick="event.stopPropagation();_fbNavMove(1,S.students);renderDailyFeedbackSummary(S.students)"
+            style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);background:var(--canvas);cursor:${canGoForward?'pointer':'not-allowed'};opacity:${canGoForward?1:0.35};font-size:15px;display:flex;align-items:center;justify-content:center;transition:all 0.15s"
+            ${canGoForward?'':'disabled'}
+            title="יום הבא">›</button>
+          ${!isToday ? `<button onclick="event.stopPropagation();_fbNav=null;renderDailyFeedbackSummary(S.students)" style="padding:4px 10px;border-radius:12px;border:1.5px solid var(--border);background:var(--canvas);font-size:11px;font-weight:700;color:var(--ink-60);cursor:pointer;margin-right:4px">היום</button>` : ''}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:13px;color:var(--ink-60)">${submitted} מתוך ${total}</span>
+        <span style="font-size:24px;font-weight:900;color:${fillColor}">${pct}%</span>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px">
+      <div style="position:relative;height:20px;background:var(--ink-10);border-radius:99px;overflow:hidden;margin-bottom:6px">
+        <div style="position:absolute;top:0;right:0;height:100%;width:${pct}%;background:${fillColor};border-radius:99px;transition:width 0.7s ease"></div>
+        <div style="position:absolute;top:50%;transform:translateY(-50%);left:50%;font-size:11px;font-weight:700;color:rgba(0,0,0,0.35)">כלל הכיתה</div>
+      </div>
+    </div>
+
+    ${insts.length > 1 ? `
+      <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
+        <div style="font-size:12px;font-weight:700;color:var(--ink-40);margin-bottom:14px;letter-spacing:0.05em">פילוח לפי מוסד</div>
+        ${instRows}
+      </div>
+    ` : instRows}
+  `;
+}
+
 
 function renderTeacherOverview() {
   const ss = S.students;
@@ -2923,6 +3338,7 @@ function renderTeacherOverview() {
     <span class="inst-chip ${inst==="הכל"?"active":""}" onclick="filterOverviewTable('${inst}', this)">${inst}</span>
   `).join("");
 
+  renderDailyFeedbackSummary(ss, true);
   renderOverviewTable(ss);
 }
 
@@ -3084,8 +3500,233 @@ function renderAllDocs() {
 }
 
 // ============================================================
-//  TEACHER STUDENT DETAIL
+//  TEACHER ANALYTICS PAGE
 // ============================================================
+function renderAnalytics() {
+  const instFilterEl = $('analyticsInstFilter');
+  if (instFilterEl) {
+    const insts = getInstitutions();
+    instFilterEl.innerHTML = insts.map(i => `<option value="${i}">${i === 'הכל' ? 'כל המוסדות' : i}</option>`).join('');
+  }
+  const selectedInst = instFilterEl ? instFilterEl.value : 'הכל';
+  const students = selectedInst === 'הכל' ? S.students : S.students.filter(s => (s.institution || 'ללא מוסד') === selectedInst);
+
+  if (!students.length) return;
+
+  // ── Compute class averages ──
+  function calcFbAvg(s) {
+    const w = getCurWeek(s);
+    const sc = DAY_KEYS.map(dk => w[dk] && w[dk].score !== '' && w[dk].score !== undefined ? parseFloat(w[dk].score)*10 : null).filter(v=>v!==null);
+    return sc.length ? sc.reduce((a,b)=>a+b,0)/sc.length : 0;
+  }
+  function calcExecAvg(s) {
+    const w = getCurWeek(s);
+    const scores = [w.portfolioScore, w.docScore]
+      .map(v => (v !== undefined && v !== '' && v !== null) ? parseFloat(v) : null)
+      .filter(v => v !== null && v > 0);
+    return scores.length ? scores.reduce((a,b)=>a+b,0) / scores.length : 0;
+  }
+
+  const classTotal = students.length;
+  const classFbAvg  = Math.round(students.reduce((s,st)=>s+calcFbAvg(st),0)/classTotal);
+  const classExecAvg = Math.round(students.reduce((s,st)=>s+calcExecAvg(st),0)/classTotal);
+  const classElig   = students.filter(s => calcFbAvg(s) >= 70 && calcExecAvg(s) >= 70).length;
+  const classWeeklyAvg = Math.round(students.reduce((s,st)=>s+(parseInt(getCurWeek(st).finalScore)||0),0)/classTotal);
+
+  // Stats
+  const statsEl = $('analyticsStats');
+  if (statsEl) statsEl.innerHTML = `
+    <div class="stat">
+      <div class="stat-accent-bar" style="background:var(--accent)"></div>
+      <div class="stat-label">תלמידות בניתוח</div>
+      <div class="stat-value">${classTotal}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-accent-bar" style="background:${scoreColor(classFbAvg)}"></div>
+      <div class="stat-label">ממוצע משובים כיתתי</div>
+      <div class="stat-value" style="color:${scoreColor(classFbAvg)}">${classFbAvg || '—'}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-accent-bar" style="background:${scoreColor(classExecAvg)}"></div>
+      <div class="stat-label">ממוצע ביצוע כיתתי</div>
+      <div class="stat-value" style="color:${scoreColor(classExecAvg)}">${classExecAvg || '—'}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-accent-bar" style="background:var(--green)"></div>
+      <div class="stat-label">זכאיות להנחיה</div>
+      <div class="stat-value" style="color:var(--green)">${classElig} / ${classTotal}</div>
+      <div class="stat-change">${Math.round(classElig/classTotal*100)}% מהכיתה</div>
+    </div>
+  `;
+
+  // ── Daily feedback chart (class avg by day) ──
+  const tc = $('teacherDailyChart');
+  if (tc) {
+    const existing = Chart.getChart('teacherDailyChart');
+    if (existing) existing.destroy();
+    const dayLabels = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','שבת'];
+    const dayAvgs = DAY_KEYS.map(dk => {
+      const scores = students.map(s => {
+        const w = getCurWeek(s);
+        return w[dk] && w[dk].score !== '' && w[dk].score !== undefined ? parseFloat(w[dk].score)*10 : null;
+      }).filter(v => v !== null);
+      return scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : 0;
+    });
+    const colors = dayAvgs.map(v => v >= 70 ? 'rgba(0,179,122,0.8)' : v >= 50 ? 'rgba(30,107,255,0.8)' : 'rgba(229,57,53,0.75)');
+    new Chart(tc.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: dayLabels,
+        datasets: [{
+          label: 'ממוצע יומי כיתתי',
+          data: dayAvgs,
+          backgroundColor: colors,
+          borderRadius: 8,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => ` ממוצע: ${c.parsed.y}` } }
+        },
+        scales: {
+          y: { min: 0, max: 100, grid: { color: '#F0F2F5' }, ticks: { font: { size: 11 } } },
+          x: { grid: { display: false }, ticks: { font: { size: 12 } } }
+        }
+      }
+    });
+  }
+
+  // ── Guidance eligibility gauges for class ──
+  const tgg = $('teacherGuidanceGauges');
+  if (tgg) {
+    function teacherGauge(label, value, emoji) {
+      const pct = Math.min(100, Math.max(0, Math.round(value)));
+      const fillColor = pct >= 70 ? 'var(--green)' : (pct >= 50 ? 'var(--accent)' : 'var(--red)');
+      return `
+        <div style="margin-bottom:18px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:13px;font-weight:700;color:var(--ink)">${emoji} ${label}</span>
+            <span style="font-size:22px;font-weight:900;color:${fillColor}">${pct}</span>
+          </div>
+          <div style="position:relative;height:22px;background:var(--ink-10);border-radius:99px;overflow:hidden">
+            <div style="position:absolute;top:0;right:0;height:100%;width:${pct}%;background:${fillColor};border-radius:99px;transition:width 0.6s ease"></div>
+          </div>
+        </div>
+      `;
+    }
+    tgg.innerHTML = `
+      <div style="padding:4px 8px">
+        ${teacherGauge('ממוצע משובים יומיים', classFbAvg, '📝')}
+        ${teacherGauge('ממוצע ביצוע (תיק + תיעוד)', classExecAvg, '📁')}
+        <div style="margin-top:4px;padding:10px 14px;border-radius:var(--radius);background:var(--canvas);border:1px solid var(--border)">
+          <span style="font-size:13px;color:var(--ink-60)">
+            <strong style="color:var(--ink)">${classElig}</strong> מתוך <strong style="color:var(--ink)">${classTotal}</strong> תלמידות זכאיות להנחיה
+          </span>
+        </div>
+      </div>
+    `;
+  }
+
+  // ── Student breakdown chart ──
+  const sbc = $('studentBreakdownChart');
+  if (sbc) {
+    const existing = Chart.getChart('studentBreakdownChart');
+    if (existing) existing.destroy();
+    const names = students.map(s => s.name.split(' ')[0]); // first name only for privacy
+    const fbData = students.map(s => Math.round(calcFbAvg(s)));
+    const execData = students.map(s => Math.round(calcExecAvg(s)));
+    new Chart(sbc.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: names,
+        datasets: [
+          {
+            label: 'ממוצע משובים',
+            data: fbData,
+            backgroundColor: 'rgba(30,107,255,0.75)',
+            borderRadius: 5,
+          },
+          {
+            label: 'ממוצע ביצוע',
+            data: execData,
+            backgroundColor: 'rgba(0,179,122,0.75)',
+            borderRadius: 5,
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'bottom', labels: { font: { size: 11 }, padding: 12 } },
+          tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y}` } },
+          annotation: {
+            annotations: {
+              threshold: {
+                type: 'line',
+                yMin: 70, yMax: 70,
+                borderColor: 'rgba(229,57,53,0.7)',
+                borderWidth: 2,
+                borderDash: [6,4],
+                label: { display: true, content: 'יעד 70', position: 'start', color: 'var(--red)', font: { size: 11, weight: 700 } }
+              }
+            }
+          }
+        },
+        scales: {
+          y: { min: 0, max: 100, grid: { color: '#F0F2F5' }, ticks: { font: { size: 11 } } },
+          x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 30 } }
+        }
+      }
+    });
+  }
+
+  // ── Weekly trend (class average) ──
+  const twt = $('teacherWeeklyTrendChart');
+  if (twt) {
+    const existing = Chart.getChart('teacherWeeklyTrendChart');
+    if (existing) existing.destroy();
+
+    // Find max weeks across students
+    const maxWeeks = Math.max(...students.map(s => (s.weeks||[]).length), 1);
+    const weekLabels = Array.from({length: maxWeeks}, (_, i) => `שבוע ${i+1}`);
+    const weekAvgs = weekLabels.map((_, wi) => {
+      const scores = students.map(s => parseInt((s.weeks||[])[wi] && (s.weeks||[])[wi].finalScore || 0)).filter(Boolean);
+      return scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null;
+    });
+
+    new Chart(twt.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: weekLabels,
+        datasets: [{
+          label: 'ממוצע כיתתי',
+          data: weekAvgs,
+          borderColor: '#1E6BFF',
+          backgroundColor: 'rgba(30,107,255,0.08)',
+          fill: true, tension: 0.4, borderWidth: 2.5,
+          pointBackgroundColor: '#1E6BFF', pointRadius: 5,
+          spanGaps: true,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => ` ממוצע כיתתי: ${c.parsed.y}` } }
+        },
+        scales: {
+          y: { min: 0, max: 100, grid: { color: '#F0F2F5' }, ticks: { font: { size: 11 } } },
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+        }
+      }
+    });
+  }
+}
+
+
 async function openStudentDetail(username) {
   showLoading('טוען נתוני תלמידה...');
   try {
