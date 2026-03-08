@@ -2055,12 +2055,48 @@ setInterval(updateClock, 30000);
 //  API
 // ============================================================
 async function api(action, params = {}) {
+  if (action !== 'login' && S.token) {
+    params.token = S.token;
+    params.callerUsername = S.user ? S.user.username : '';
+  }
   const url = SCRIPT_URL + '?' + new URLSearchParams({ action, ...params });
   const res = await fetch(url);
   return res.json();
 }
 
+// Actions that mutate data and require a CSRF token
+const CSRF_ACTIONS = new Set([
+  'submitDailyFeedback','submitPortfolio','submitDocumentation',
+  'saveGrade','saveWeekScore','savePortfolioGrade',
+  'updateGuidanceDay','saveTasks','addStudent'
+]);
+
+async function fetchCsrfToken() {
+  if (!S.token) return null;
+  const params = new URLSearchParams({
+    action: 'getCsrfToken',
+    token: S.token,
+    callerUsername: S.user ? S.user.username : ''
+  });
+  try {
+    const res = await fetch(SCRIPT_URL + '?' + params.toString());
+    const data = await res.json();
+    return data.success ? data.csrf : null;
+  } catch(e) { return null; }
+}
+
 async function apiPost(action, data = {}) {
+  // Inject auth token for every request (except login itself)
+  if (action !== 'login' && S.token) {
+    data.token = S.token;
+    data.callerUsername = S.user ? S.user.username : '';
+  }
+  // Fetch a fresh CSRF token for every mutating action
+  if (CSRF_ACTIONS.has(action)) {
+    const csrf = await fetchCsrfToken();
+    if (!csrf) { toast('שגיאת אבטחה — לא ניתן לאמת את הבקשה', 'error'); throw new Error('No CSRF token'); }
+    data.csrf = csrf;
+  }
   const body = new URLSearchParams({ action, ...data }).toString();
   const res = await fetch(SCRIPT_URL, {
     method: 'POST',
@@ -2080,6 +2116,33 @@ function switchAuthTab(tab) {
   });
 }
 
+
+// ============================================================
+//  DEVICE FINGERPRINT  (stable, privacy-safe browser hash)
+// ============================================================
+async function getDeviceFingerprint() {
+  // Build a string from stable browser properties
+  const raw = [
+    navigator.userAgent,
+    navigator.language,
+    screen.width + 'x' + screen.height + 'x' + screen.colorDepth,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    navigator.hardwareConcurrency || '',
+    navigator.platform || '',
+  ].join('|');
+
+  // Hash with SubtleCrypto (SHA-256) → hex string
+  try {
+    const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  } catch(_) {
+    // Fallback: simple non-crypto hash (good enough for fingerprinting)
+    let h = 0;
+    for (let i = 0; i < raw.length; i++) { h = Math.imul(31, h) + raw.charCodeAt(i) | 0; }
+    return 'fallback_' + Math.abs(h).toString(16);
+  }
+}
+
 async function doLogin() {
   const username = $('loginUser').value.trim();
   const password = $('loginPass').value.trim();
@@ -2087,9 +2150,11 @@ async function doLogin() {
 
   showLoading('מתחבר...');
   try {
-    const res = await api('login', { username, password });
+    const deviceFingerprint = await getDeviceFingerprint();
+    const res = await api('login', { username, password, deviceFingerprint });
     hideLoading();
     if (res.success) {
+      S.token = res.token;
       S.user = res.user;
       $('authScreen').style.display = 'none';
       $('app').style.display = 'flex';
@@ -2113,11 +2178,18 @@ function showAuthError(msg) {
 }
 
 function doLogout() {
-  S = { user: null, students: [], currentStudent: null, currentWeekIdx: 0 };
+  S = { user: null, token: null, students: [], currentStudent: null, currentWeekIdx: 0 };
   $('authScreen').style.display = 'flex';
   $('app').style.display = 'none';
   $('loginUser').value = '';
   $('loginPass').value = '';
+}
+
+async function resetStudentDevice(username) {
+  if (!confirm('לאפס את המכשיר הרשום עבור ' + username + '?\nהתלמידה תוכל להתחבר ממכשיר חדש בכניסה הבאה.')) return;
+  const res = await apiPost('resetDevice', { username });
+  if (res.success) toast('המכשיר אופס — התלמידה תוכל להתחבר ממכשיר חדש', 'success');
+  else toast(res.error || 'שגיאה', 'error');
 }
 
 $('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
