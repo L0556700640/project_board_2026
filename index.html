@@ -1955,6 +1955,104 @@ tbody tr:hover td { background: var(--canvas); }
 // ============================================================
 //  CONFIG
 // ============================================================
+// ============================================================
+//  SECURITY — DevTools blocker + Login rate limiter
+// ============================================================
+
+// --- DevTools detection & blocking ---
+(function() {
+  const BLOCKED_MSG = 'כלי הפיתוח חסומים במערכת זו';
+
+  // Block F12 / Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+U
+  document.addEventListener('keydown', function(e) {
+    if (
+      e.key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && ['I','i','J','j','C','c'].includes(e.key)) ||
+      (e.ctrlKey && ['U','u'].includes(e.key))
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  }, true);
+
+  // Block right-click context menu
+  document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    return false;
+  }, true);
+
+  // Detect if DevTools is open (size-based heuristic) and blur the page
+  let devtoolsOpen = false;
+  function checkDevtools() {
+    const threshold = 160;
+    const widthDiff  = window.outerWidth  - window.innerWidth;
+    const heightDiff = window.outerHeight - window.innerHeight;
+    const isOpen = widthDiff > threshold || heightDiff > threshold;
+    if (isOpen && !devtoolsOpen) {
+      devtoolsOpen = true;
+      document.body.style.filter = 'blur(8px)';
+      document.body.style.pointerEvents = 'none';
+      document.body.style.userSelect = 'none';
+      // Show warning overlay
+      let ov = document.getElementById('devtools-warning');
+      if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'devtools-warning';
+        ov.style.cssText = `
+          position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;
+          background:rgba(13,17,23,0.97);display:flex;flex-direction:column;
+          align-items:center;justify-content:center;gap:16px;direction:rtl;
+        `;
+        ov.innerHTML = `
+          <div style="font-size:52px">🔒</div>
+          <div style="color:white;font-size:22px;font-weight:800;">\${BLOCKED_MSG}</div>
+          <div style="color:rgba(255,255,255,0.5);font-size:14px;">סגרי את כלי הפיתוח כדי להמשיך</div>
+        `;
+        document.body.appendChild(ov);
+      }
+      ov.style.display = 'flex';
+    } else if (!isOpen && devtoolsOpen) {
+      devtoolsOpen = false;
+      document.body.style.filter = '';
+      document.body.style.pointerEvents = '';
+      document.body.style.userSelect = '';
+      const ov = document.getElementById('devtools-warning');
+      if (ov) ov.style.display = 'none';
+    }
+  }
+  setInterval(checkDevtools, 500);
+})();
+
+// --- Login attempt rate limiter (client-side) ---
+const LOGIN_ATTEMPTS = { count: 0, lockedUntil: 0 };
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+function checkLoginRateLimit() {
+  const now = Date.now();
+  if (LOGIN_ATTEMPTS.lockedUntil > now) {
+    const remaining = Math.ceil((LOGIN_ATTEMPTS.lockedUntil - now) / 1000 / 60);
+    showAuthError(`יותר מדי ניסיונות. נסי שוב בעוד \${remaining} דקות`);
+    return false;
+  }
+  return true;
+}
+
+function recordFailedAttempt() {
+  LOGIN_ATTEMPTS.count++;
+  if (LOGIN_ATTEMPTS.count >= MAX_LOGIN_ATTEMPTS) {
+    LOGIN_ATTEMPTS.lockedUntil = Date.now() + LOCKOUT_MS;
+    LOGIN_ATTEMPTS.count = 0;
+    showAuthError('החשבון נחסם ל-5 דקות לאחר יותר מדי ניסיונות כושלים');
+  }
+}
+
+function resetLoginAttempts() {
+  LOGIN_ATTEMPTS.count = 0;
+  LOGIN_ATTEMPTS.lockedUntil = 0;
+}
+
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCu2y04mlMHo-_pmtVr8HeALWsylmH9p9IA5CDEOWd4PlI3JtwmQKSxkD6ybt8CkU/exec';
 
 // ============================================================
@@ -1962,12 +2060,14 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCu2y04mlMHo-_pmtVr
 // ============================================================
 let S = {
   user: null,
+  token: null,
   students: [],
   currentStudent: null,
   currentWeekIdx: 0,
   gradeCtx: null,
   pgCtx: null,
   wsCtx: null,
+  pollInterval: null,
 };
 
 // ============================================================
@@ -2144,6 +2244,7 @@ async function getDeviceFingerprint() {
 }
 
 async function doLogin() {
+  if (!checkLoginRateLimit()) return;
   const username = $('loginUser').value.trim();
   const password = $('loginPass').value.trim();
   if (!username || !password) { showAuthError('יש למלא שם משתמש וסיסמה'); return; }
@@ -2154,6 +2255,7 @@ async function doLogin() {
     const res = await api('login', { username, password, deviceFingerprint });
     hideLoading();
     if (res.success) {
+      resetLoginAttempts();
       S.token = res.token;
       S.user = res.user;
       $('authScreen').style.display = 'none';
@@ -2161,6 +2263,7 @@ async function doLogin() {
       $('app').style.flexDirection = 'column';
       initApp();
     } else {
+      recordFailedAttempt();
       showAuthError('שם משתמש או סיסמה שגויים');
     }
   } catch(e) {
@@ -2177,12 +2280,14 @@ function showAuthError(msg) {
   setTimeout(() => el.style.display = 'none', 4000);
 }
 
-function doLogout() {
+function doLogout(reason) {
+  stopStudentPolling();
   S = { user: null, token: null, students: [], currentStudent: null, currentWeekIdx: 0 };
-  $('authScreen').style.display = 'flex';
   $('app').style.display = 'none';
+  $('authScreen').style.display = 'flex';
   $('loginUser').value = '';
   $('loginPass').value = '';
+  if (reason) showAuthError(reason);
 }
 
 async function resetStudentDevice(username) {
@@ -2255,6 +2360,38 @@ async function loadStudentDashboard() {
     console.error(e);
   }
 }
+
+// On page visibility change (tab switch / browser return) — re-fetch fresh data once
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && S.user && S.user.role !== 'teacher') {
+    try {
+      const res = await api('getStudentData', { username: S.user.username });
+      if (!res.success) return;
+      const newDataStr = JSON.stringify(res.data);
+      if (newDataStr === JSON.stringify(S.studentData)) return;
+      S.studentData = res.data;
+      renderStudentDashboard();
+      showSyncIndicator();
+    } catch(e) { /* silent */ }
+  }
+});
+
+function showSyncIndicator() {
+  let ind = document.getElementById('syncIndicator');
+  if (!ind) {
+    ind = document.createElement('div');
+    ind.id = 'syncIndicator';
+    ind.style.cssText = 'position:fixed;bottom:24px;left:24px;background:var(--green);color:white;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;direction:rtl';
+    ind.textContent = '✓ הנתונים עודכנו';
+    document.body.appendChild(ind);
+  }
+  ind.style.opacity = '1';
+  setTimeout(() => { ind.style.opacity = '0'; }, 2500);
+}
+
+// No-op stubs — polling removed, kept for safety if called elsewhere
+function startStudentPolling() {}
+function stopStudentPolling() { if (S.pollInterval) { clearInterval(S.pollInterval); S.pollInterval = null; } }
 
 function renderStudentDashboard() {
   const d = S.studentData;
@@ -3187,6 +3324,100 @@ async function saveTasks() {
 }
 
 // Close modal on overlay click
+
+// ============================================================
+//  SECURITY: DevTools Detection + Periodic Server Role Check
+// ============================================================
+
+// --- DevTools Detection ---
+// Detects opening of DevTools via multiple methods and forces logout.
+// Not 100% foolproof for experts, but stops casual console manipulation.
+(function() {
+  const THRESHOLD = 160; // pixels — DevTools panel usually wider/taller than this
+
+  function isDevToolsOpen() {
+    return (window.outerWidth  - window.innerWidth  > THRESHOLD) ||
+           (window.outerHeight - window.innerHeight > THRESHOLD);
+  }
+
+  // Method 1: size-based detection
+  function sizeCheck() {
+    if (!S.user) return; // not logged in — don't bother
+    if (isDevToolsOpen()) {
+      if (S.user.role !== 'teacher') {
+        doLogout('זוהה שימוש בכלי פיתוח — החיבור נותק');
+      }
+    }
+  }
+  setInterval(sizeCheck, 1500);
+
+  // Method 2: debugger timing trick (fires when console is open)
+  let devtoolsCheckCounter = 0;
+  function devtoolsTimingCheck() {
+    if (!S.user || S.user.role === 'teacher') return;
+    const t0 = performance.now();
+    // eslint-disable-next-line no-debugger
+    debugger; // pauses only when DevTools is open
+    const elapsed = performance.now() - t0;
+    if (elapsed > 50) {
+      doLogout('זוהה שימוש בכלי פיתוח — החיבור נותק');
+    }
+  }
+  setInterval(devtoolsTimingCheck, 3000);
+
+  // Method 3: console.log object getter trick
+  let devToolsViaConsole = false;
+  const img = new Image();
+  Object.defineProperty(img, 'id', {
+    get: function() {
+      devToolsViaConsole = true;
+    }
+  });
+  setInterval(function() {
+    devToolsViaConsole = false;
+    console.log('%c', img); // triggers getter only when DevTools console is open
+    setTimeout(function() {
+      if (devToolsViaConsole && S.user && S.user.role !== 'teacher') {
+        doLogout('זוהה שימוש בכלי פיתוח — החיבור נותק');
+      }
+    }, 100);
+  }, 3000);
+
+  // Method 4: Disable right-click for non-teachers
+  document.addEventListener('contextmenu', function(e) {
+    if (!S.user || S.user.role === 'teacher') return;
+    e.preventDefault();
+  });
+
+  // Method 5: Block common DevTools keyboard shortcuts for non-teachers
+  document.addEventListener('keydown', function(e) {
+    if (!S.user || S.user.role === 'teacher') return;
+    const k = e.key;
+    const ctrl = e.ctrlKey || e.metaKey;
+    // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U (view source)
+    if (
+      k === 'F12' ||
+      (ctrl && e.shiftKey && (k === 'I' || k === 'i' || k === 'J' || k === 'j' || k === 'C' || k === 'c')) ||
+      (ctrl && (k === 'U' || k === 'u'))
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+})();
+
+// --- Periodic Server-Side Role Verification ---
+// Every 2 minutes, ask the server "who am I really?" and log out if tampered.
+setInterval(async function() {
+  if (!S.user || !S.token) return;
+  try {
+    const rv = await apiPost('verifyRole', {});
+    if (!rv.success || rv.role !== S.user.role || rv.username !== S.user.username) {
+      doLogout('נותק עקב שינוי פרטי משתמש לא מורשה');
+    }
+  } catch(e) { /* network hiccup — don't logout, try again next interval */ }
+}, 2 * 60 * 1000);
+
 document.querySelectorAll('.overlay').forEach(ov => {
   ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
 });
