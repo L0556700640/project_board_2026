@@ -2052,79 +2052,15 @@ function updateClock() {
 setInterval(updateClock, 30000);
 
 // ============================================================
-//  INACTIVITY & SESSION MANAGER
-//  - Auto-logout after 30 min of no activity
-//  - Warning toast at 29 min
-//  - Silent token refresh every 20 min of activity
-// ============================================================
-const INACTIVITY_LIMIT   = 30 * 60 * 1000;  // 30 minutes
-const INACTIVITY_WARNING = 29 * 60 * 1000;  // warn at 29 min
-const TOKEN_REFRESH_INT  = 20 * 60 * 1000;  // refresh token every 20 min
-
-let _inactivityTimer  = null;
-let _warningTimer     = null;
-let _tokenRefreshTimer = null;
-let _inactivityActive = false;
-
-function resetInactivityTimer() {
-  if (!_inactivityActive) return;
-  clearTimeout(_inactivityTimer);
-  clearTimeout(_warningTimer);
-  _warningTimer = setTimeout(() => {
-    toast('⚠️ תצאי מהמערכת בעוד דקה בגלל חוסר פעילות', 'amber');
-  }, INACTIVITY_WARNING);
-  _inactivityTimer = setTimeout(() => {
-    toast('יצאת מהמערכת בגלל חוסר פעילות', 'error');
-    doLogout();
-  }, INACTIVITY_LIMIT);
-}
-
-function startInactivityWatch() {
-  _inactivityActive = true;
-  ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(evt => {
-    document.addEventListener(evt, resetInactivityTimer, { passive: true });
-  });
-  resetInactivityTimer();
-  // Silent token refresh
-  clearInterval(_tokenRefreshTimer);
-  _tokenRefreshTimer = setInterval(async () => {
-    if (!S.user || !S.token) return;
-    try {
-      const res = await apiPost('refreshToken', { callerUsername: S.user.username, token: S.token });
-      if (res && res.token) { S.token = res.token; }
-    } catch(e) { /* silent */ }
-  }, TOKEN_REFRESH_INT);
-}
-
-function stopInactivityWatch() {
-  _inactivityActive = false;
-  clearTimeout(_inactivityTimer);
-  clearTimeout(_warningTimer);
-  clearInterval(_tokenRefreshTimer);
-  ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(evt => {
-    document.removeEventListener(evt, resetInactivityTimer);
-  });
-}
-
-
-// ============================================================
 //  API
 // ============================================================
 async function api(action, params = {}) {
-  if (action !== 'login' && S.token) {
-    params.token = S.token;
-    params.callerUsername = S.user ? S.user.username : '';
-  }
   const url = SCRIPT_URL + '?' + new URLSearchParams({ action, ...params });
   const res = await fetch(url);
   return res.json();
 }
 
 async function apiPost(action, data = {}) {
-  if (action !== 'login' && S.token) {
-    data.token = S.token;
-    data.callerUsername = S.user ? S.user.username : '';
-  }
   const body = new URLSearchParams({ action, ...data }).toString();
   const res = await fetch(SCRIPT_URL, {
     method: 'POST',
@@ -2154,7 +2090,6 @@ async function doLogin() {
     const res = await api('login', { username, password });
     hideLoading();
     if (res.success) {
-      S.token = res.token;
       S.user = res.user;
       $('authScreen').style.display = 'none';
       $('app').style.display = 'flex';
@@ -2178,8 +2113,7 @@ function showAuthError(msg) {
 }
 
 function doLogout() {
-  stopInactivityWatch();
-  S = { user: null, token: null, students: [], currentStudent: null, currentWeekIdx: 0 };
+  S = { user: null, students: [], currentStudent: null, currentWeekIdx: 0 };
   $('authScreen').style.display = 'flex';
   $('app').style.display = 'none';
   $('loginUser').value = '';
@@ -2192,7 +2126,6 @@ $('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin
 //  APP INIT
 // ============================================================
 function initApp() {
-  startInactivityWatch();
   const u = S.user;
   updateClock();
 
