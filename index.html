@@ -1720,6 +1720,50 @@ tbody tr:hover td { background: var(--canvas); }
         </div>
       </div>
 
+      <!-- Teacher Guidance Schedule Page -->
+      <div class="page" id="page-t-schedule">
+        <div class="content-inner">
+          <div class="page-header">
+            <div>
+              <div class="page-title">📅 לו"ז הנחיות</div>
+              <div class="page-subtitle" id="scheduleDate"></div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openAddGuidanceSlotModal()">+ קביעת שעה</button>
+          </div>
+
+          <!-- Today's timeline -->
+          <div class="card mb-20">
+            <div class="card-header">
+              <div>
+                <div class="card-title">הנחיות להיום</div>
+                <div class="card-subtitle">בנות שזכאיות להנחיה — שבוע שעבר אושר ✅ • לחצי שם לפתיחת דף התלמידה</div>
+              </div>
+            </div>
+            <div id="scheduleTimeline" style="min-height:80px"></div>
+          </div>
+
+          <!-- All sessions — editable table -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">כל הבנות הזכאיות להנחיה השבוע</div>
+                <div class="card-subtitle">על פי סטטוס אושר בשבוע הקודם</div>
+              </div>
+              <div class="flex gap-8" id="scheduleEditBtns">
+                <button class="btn btn-ghost btn-sm" id="btnEditSchedule" onclick="enterScheduleEditMode()">✏️ עריכת שעות</button>
+              </div>
+            </div>
+            <div id="scheduleAllList"></div>
+            <!-- Save bar — visible only in edit mode -->
+            <div id="scheduleEditBar" style="display:none;padding:14px 16px;border-top:1px solid var(--border);display:none;gap:10px;align-items:center">
+              <span style="font-size:13px;color:var(--ink-60);flex:1">ערכי את השעות ולחצי שמור הכל</span>
+              <button class="btn btn-ghost btn-sm" onclick="cancelScheduleEditMode()">ביטול</button>
+              <button class="btn btn-primary" onclick="saveAllScheduleTimes()">💾 שמור הכל</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Teacher Student Detail -->
       <div class="page" id="page-t-detail">
         <div class="content-inner">
@@ -1988,8 +2032,8 @@ tbody tr:hover td { background: var(--canvas); }
       <!-- Hidden exam score field (kept for API compatibility) -->
       <input type="hidden" id="ws_exam" value="0"/>
       <div class="field form-full">
-        <label>הערות כלליות לשבוע</label>
-        <textarea id="ws_notes" placeholder="הערות..."></textarea>
+        <label>הערות + שעת הנחיה — כתבי את השעה בתוך ההערות (למשל: 12:40 או 12:40 — זום)</label>
+        <textarea id="ws_notes" placeholder="12:40&#10;או: 12:40 — זום&#10;הערות נוספות..."></textarea>
       </div>
     </div>
     <div class="modal-footer">
@@ -2090,6 +2134,36 @@ tbody tr:hover td { background: var(--canvas); }
   </div>
 </div>
 
+<!-- Add Guidance Slot Modal -->
+<div class="overlay" id="addGuidanceSlotModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">🕐 קביעת שעת הנחיה</span>
+      <button class="modal-close" onclick="closeModal('addGuidanceSlotModal')">✕</button>
+    </div>
+    <div style="background:var(--accent-lt);border:1px solid rgba(30,107,255,0.2);border-radius:var(--radius);padding:10px 14px;margin-bottom:18px;font-size:13px;color:var(--accent)">
+      רק תלמידות שאושרו להנחיה שבוע שעבר מופיעות כאן
+    </div>
+    <div class="field">
+      <label>תלמידה</label>
+      <select id="ags_student"></select>
+    </div>
+    <div class="field">
+      <label>שעת הנחיה (שעון ישראל) — פורמט HH:MM</label>
+      <input type="text" id="ags_time" placeholder="16:30" maxlength="5" oninput="this.value=this.value.replace(/[^0-9:]/g,'')"
+        style="letter-spacing:2px;font-size:15px;font-weight:700;text-align:center"/>
+    </div>
+    <div class="field">
+      <label>פרטים נוספים (אופציונלי)</label>
+      <textarea id="ags_notes" placeholder="זום / טלפון / קישור..." style="min-height:60px"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addGuidanceSlotModal')">ביטול</button>
+      <button class="btn btn-primary" onclick="saveGuidanceSlot()">קבע שעה ✓</button>
+    </div>
+  </div>
+</div>
+
 <!-- Guidance Details Modal (teacher sets time/mode) -->
 <div class="overlay" id="guidanceDetailsModal">
   <div class="modal">
@@ -2106,8 +2180,9 @@ tbody tr:hover td { background: var(--canvas); }
         <input type="date" id="gdm_date"/>
       </div>
       <div class="field">
-        <label>שעת הנחיה</label>
-        <input type="time" id="gdm_time"/>
+        <label>שעת הנחיה — פורמט HH:MM (שעון ישראל)</label>
+        <input type="text" id="gdm_time" placeholder="16:30" maxlength="5" oninput="this.value=this.value.replace(/[^0-9:]/g,'')"
+          style="letter-spacing:2px;font-size:15px;font-weight:700;text-align:center"/>
       </div>
       <div class="field form-full">
         <label>אופן ההנחיה</label>
@@ -2281,6 +2356,10 @@ function showPage(pageId) {
   document.querySelectorAll('.sidebar-item').forEach(it => {
     it.classList.toggle('active', it.dataset.page === pageId);
   });
+  // Refresh schedule page whenever navigated to
+  if (pageId === 'page-t-schedule' && S.students && S.students.length) renderSchedulePage();
+  // Exit edit mode when leaving schedule page
+  if (pageId !== 'page-t-schedule') _scheduleEditMode = false;
 }
 
 const DAY_KEYS = ['day1','day2','day3','day4','day5','day6','day7'];
@@ -2517,6 +2596,7 @@ function initApp() {
     buildSidebar([
       { page: 'page-t-overview',  icon: '📊', label: 'סקירה כללית' },
       { page: 'page-t-students',  icon: '👩‍🎓', label: 'תלמידות' },
+      { page: 'page-t-schedule',  icon: '📅', label: 'לו"ז הנחיות' },
       { page: 'page-t-analytics', icon: '📈', label: 'ניתוחים כיתתיים' },
       { page: 'page-t-portfolios',icon: '📁', label: 'תיקי פרויקט' },
       { page: 'page-t-feedbacks', icon: '📝', label: 'משובים' },
@@ -3114,7 +3194,7 @@ function buildWeekDetailHTML(w, isTeacher) {
       </div>
       <div>${statusBadge(w.status||'pending')}</div>
     </div>
-    ${w.notes ? `<div class="teacher-note mb-16">📌 ${w.notes}</div>` : ''}
+    ${w.notes ? `<div class="teacher-note mb-16">📌 ${_formatNotesForDisplay(w.notes)}</div>` : ''}
     <div class="divider"></div>
     ${DAY_KEYS.map(d => {
       const fd = w[d];
@@ -3228,6 +3308,7 @@ async function loadTeacherDashboard() {
     renderAllFeedbacks();
     renderAllDocs();
     renderAnalytics();
+    renderSchedulePage();
     showPage('page-t-overview');
   } catch(e) { hideLoading(); toast('שגיאת תקשורת', 'error'); console.error(e); }
 }
@@ -4246,7 +4327,7 @@ function renderWeekContent(w) {
           </div>
         </div>
       </div>
-      ${w.notes ? `<div class="teacher-note mt-16">📌 ${w.notes}</div>` : ''}
+      ${w.notes ? `<div class="teacher-note mt-16">📌 ${_formatNotesForDisplay(w.notes)}</div>` : ''}
     </div>
 
     <!-- Tasks for this week -->
@@ -4348,8 +4429,43 @@ function renderWeekContent(w) {
   _renderDetailProgressChart(w, idx, S.currentStudent);
 }
 
-// ============================================================
-//  GUIDANCE DAY POPUP (student — first login of guidance day)
+// Extract time from notes field — handles:
+// 1. ISO timestamp from Google Sheets time cell: "1899-12-30T09:39:20.000Z"
+// 2. Plain text: "12:40" or "12:40 — זום"
+function _parseTimeFromNotes(notes) {
+  if (!notes) return '';
+
+  // Case 1: ISO timestamp (Google Sheets exports Time fields as ISO Date strings)
+  const isoMatch = notes.match(/\d{4}-\d{2}-\d{2}T(\d{2}:\d{2}):\d{2}(?:\.\d+)?Z/);
+  if (isoMatch) {
+    // Parse the ISO string and convert UTC → Israel time
+    try {
+      const d = new Date(notes.trim());
+      if (!isNaN(d)) {
+        return new Intl.DateTimeFormat('he-IL', {
+          timeZone: 'Asia/Jerusalem',
+          hour: '2-digit', minute: '2-digit', hour12: false
+        }).format(d).replace(/[^0-9:]/g, '').slice(0, 5);
+      }
+    } catch(e) {}
+  }
+
+  // Case 2: Plain HH:MM text (written directly by teacher)
+  const plainMatch = notes.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+  return plainMatch ? plainMatch[0] : '';
+}
+
+// Format notes for display — converts ISO timestamp to readable IL time,
+// returns clean human-readable string
+function _formatNotesForDisplay(notes) {
+  if (!notes) return '';
+  const isISO = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(notes);
+  if (isISO) {
+    const time = _parseTimeFromNotes(notes);
+    return time ? `שעת הנחיה: ${time}` : '';
+  }
+  return notes;
+}
 // ============================================================
 function checkAndShowGuidanceDayPopup(d, curWeek) {
   const todayJs = new Date().getDay();
@@ -4391,25 +4507,24 @@ function checkAndShowGuidanceDayPopup(d, curWeek) {
   if (isApproved) {
     statusEl.style.background = 'var(--green-lt)';
     statusEl.style.color = 'var(--green)';
-    statusEl.textContent = '✅ סטטוס הנחיה: מאושר!';
 
-    // Show guidance time/mode if set
-    const gDate = curWeek.guidanceDate || '';
-    const gTime = curWeek.guidanceTime || '';
-    const gMode = curWeek.guidanceMode || '';
-    const gNotes = curWeek.guidanceNotes || '';
-    const modeLabels = { zoom:'זום', phone:'טלפון', anydesk:'אני דסק', other:'אחר' };
+    // Time is stored in notes of the approved (previous) week
+    const notesRaw = curWeek.notes || '';
+    const parsedTime = _parseTimeFromNotes(notesRaw);
+    const isISO = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(notesRaw);
+    const extraNotesPopup = isISO ? '' : notesRaw.replace(parsedTime,'').replace(/^[—\-\s]+/,'').trim();
 
-    if (gDate || gTime || gMode) {
-      detailsEl.style.display = 'block';
-      detailsEl.innerHTML = `
-        <div style="font-weight:700;margin-bottom:8px;font-size:14px">📅 פרטי ההנחיה:</div>
-        ${gDate ? `<div>📆 תאריך: <strong>${gDate}</strong></div>` : ''}
-        ${gTime ? `<div>🕐 שעה: <strong>${gTime}</strong></div>` : ''}
-        ${gMode ? `<div>💻 אופן: <strong>${modeLabels[gMode] || gMode}</strong></div>` : ''}
-        ${gNotes ? `<div style="margin-top:8px">📝 ${gNotes}</div>` : ''}
-      `;
-    }
+    statusEl.innerHTML = `
+      <div style="font-size:15px;font-weight:800;color:var(--green);margin-bottom:${parsedTime ? '8px' : '0'}">✅ סטטוס הנחיה: מאושר!</div>
+      ${parsedTime ? `
+        <div style="margin-top:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:18px;font-weight:900;color:var(--accent)">🕐 ${parsedTime}</span>
+          <span style="font-size:13px;color:var(--ink-60)">(שעון ישראל)</span>
+        </div>
+        ${extraNotesPopup ? `<div style="margin-top:6px;font-size:12px;color:var(--ink-60)">${extraNotesPopup}</div>` : ''}
+      ` : ''}
+    `;
+    detailsEl.style.display = 'none';
   } else {
     statusEl.style.background = 'var(--amber-lt)';
     statusEl.style.color = '#B45309';
@@ -4421,6 +4536,376 @@ function checkAndShowGuidanceDayPopup(d, curWeek) {
 
   openModal('guidanceDayPopup');
 }
+
+// ============================================================
+//  GUIDANCE SCHEDULE PAGE — correct logic:
+
+// Collect all students with approved previous week, not yet done
+function _getScheduleSessions() {
+  const sessions = [];
+  S.students.forEach(s => {
+    const weeks = s.weeks || [];
+    if (weeks.length < 2) return;
+    const prevWeekIdx = weeks.length - 2;
+    const prevWeek    = weeks[prevWeekIdx];
+    if (!prevWeek || prevWeek.status !== 'approved') return;
+    if (prevWeek.guidanceDone) return;
+
+    // Time is stored as plain text in notes (e.g. "12:40" or "12:40 — זום")
+    // This avoids any UTC/timezone conversion that happens with Date objects or guidanceTime
+    const time = _parseTimeFromNotes(prevWeek.notes) || '';
+    // Extra notes = notes text after removing the time/ISO portion
+    const rawNotes = prevWeek.notes || '';
+    const isISO = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawNotes);
+    const extraNotes = isISO
+      ? '' // ISO timestamp has no extra text to show
+      : rawNotes.replace(time, '').replace(/^[\s—\-]+/, '').trim();
+
+    sessions.push({ student: s, prevWeek, prevWeekIdx, time, notes: prevWeek.notes || '', extraNotes });
+  });
+  sessions.sort((a, b) => {
+    if (!a.time && !b.time) return a.student.name.localeCompare(b.student.name);
+    if (!a.time) return 1;
+    if (!b.time) return -1;
+    return a.time.localeCompare(b.time);
+  });
+  return sessions;
+}
+
+function renderSchedulePage() {
+  const dateEl = $('scheduleDate');
+  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('he-IL', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  _renderScheduleTimeline();
+  _renderScheduleAllList();
+}
+
+function _renderScheduleTimeline() {
+  const el = $('scheduleTimeline');
+  if (!el) return;
+  const sessions = _getScheduleSessions();
+
+  if (!sessions.length) {
+    el.innerHTML = `<div class="empty" style="padding:28px 20px">
+      <div class="empty-icon">📭</div>
+      <div class="empty-text">אין תלמידות מאושרות להנחיה השבוע</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:0">` +
+    sessions.map(sess => {
+      const timeStr = sess.time;
+      const endMin  = timeStr ? (() => {
+        const [h,m] = timeStr.split(':').map(Number);
+        const e = h*60+m+10;
+        return `${String(Math.floor(e/60)).padStart(2,'0')}:${String(e%60).padStart(2,'0')}`;
+      })() : '';
+
+      return `
+        <div style="display:flex;align-items:stretch;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.12s"
+          onmouseover="this.style.background='var(--accent-lt)'" onmouseout="this.style.background=''">
+          <!-- Time column -->
+          <div style="min-width:86px;padding:12px 14px;font-size:13px;font-weight:700;border-left:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+            <span style="color:var(--accent);font-size:15px">${timeStr || '—'}</span>
+            ${endMin ? `<span style="font-size:10px;color:var(--ink-30)">${endMin} ↑</span>` : ''}
+          </div>
+          <!-- Student info — click opens detail -->
+          <div style="flex:1;padding:12px 16px;display:flex;align-items:center;gap:12px" onclick="openStudentDetail('${sess.student.username}')">
+            <div style="width:34px;height:34px;border-radius:50%;background:var(--accent-lt);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0">
+              ${sess.student.name.charAt(0)}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:700;color:var(--ink)">${sess.student.name}</div>
+              <div style="font-size:11px;color:var(--ink-30)">${sess.student.institution||'—'} | ${sess.student.topic||'—'}</div>
+              ${sess.extraNotes ? `<div style="font-size:11px;color:var(--ink-60);margin-top:2px">📝 ${sess.extraNotes}</div>` : ''}
+            </div>
+            <span style="font-size:12px;color:var(--accent);opacity:0.6">פרטים ←</span>
+          </div>
+          <!-- Done button -->
+          <div style="padding:12px;display:flex;align-items:center">
+            <button class="btn btn-success btn-sm" onclick="event.stopPropagation();markGuidanceDone('${sess.student.username}',${sess.prevWeekIdx})"
+              title="סמן הנחיה כבוצעה — תוסר מהלוז" style="white-space:nowrap;font-size:11px">✓ בוצעה</button>
+          </div>
+        </div>
+      `;
+    }).join('') + `</div>`;
+}
+
+// Track edit mode state
+let _scheduleEditMode = false;
+
+function _renderScheduleAllList() {
+  const el = $('scheduleAllList');
+  if (!el) return;
+  const sessions = _getScheduleSessions();
+
+  if (!sessions.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">כל ההנחיות בוצעו או אין מאושרות</div></div>';
+    _exitEditModeUI(false);
+    return;
+  }
+
+  if (_scheduleEditMode) {
+    _renderScheduleEditTable(sessions, el);
+  } else {
+    _renderScheduleViewTable(sessions, el);
+  }
+}
+
+function _renderScheduleViewTable(sessions, el) {
+  el.innerHTML = `
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:var(--canvas)">
+          <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-30);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border)">שעה</th>
+          <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-30);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border)">תלמידה</th>
+          <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-30);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border)">מוסד</th>
+          <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-30);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border)">הערות</th>
+          <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-30);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border)"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sessions.map(sess => `
+          <tr style="cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--canvas)'" onmouseout="this.style.background=''">
+            <td style="padding:13px 16px;border-bottom:1px solid var(--border)" onclick="openStudentDetail('${sess.student.username}')">
+              <span style="font-size:16px;font-weight:900;color:${sess.time ? 'var(--accent)' : 'var(--ink-30)'}">${sess.time || '—'}</span>
+            </td>
+            <td style="padding:13px 16px;border-bottom:1px solid var(--border)" onclick="openStudentDetail('${sess.student.username}')">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-lt);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${sess.student.name.charAt(0)}</div>
+                <span style="font-size:13px;font-weight:700;color:var(--ink)">${sess.student.name}</span>
+              </div>
+            </td>
+            <td style="padding:13px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink-60)" onclick="openStudentDetail('${sess.student.username}')">${sess.student.institution||'—'}</td>
+            <td style="padding:13px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink-60);max-width:200px" onclick="openStudentDetail('${sess.student.username}')">
+              ${sess.extraNotes ? `<span style="font-size:11px">${sess.extraNotes}</span>` : ''}
+            </td>
+            <td style="padding:13px 16px;border-bottom:1px solid var(--border)">
+              <button class="btn btn-success btn-xs" onclick="event.stopPropagation();markGuidanceDone('${sess.student.username}',${sess.prevWeekIdx})" title="הנחיה בוצעה — תוסר מהלוז">✓ בוצעה</button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function _renderScheduleEditTable(sessions, el) {
+  el.innerHTML = `
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:var(--canvas)">
+          <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-30);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border)">שעה ✏️</th>
+          <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-30);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border)">תלמידה</th>
+          <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-30);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border)">מוסד</th>
+          <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-30);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border)">הערות</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sessions.map((sess, i) => `
+          <tr style="background:${i%2===0?'white':'var(--canvas)'}">
+            <td style="padding:10px 16px;border-bottom:1px solid var(--border)">
+              <input type="text"
+                id="sched_time_${sess.student.username}"
+                value="${sess.time || ''}"
+                placeholder="12:30"
+                maxlength="5"
+                data-username="${sess.student.username}"
+                data-weekidx="${sess.prevWeekIdx}"
+                oninput="this.value=this.value.replace(/[^0-9:]/g,'')"
+                style="width:90px;padding:7px 10px;border:1.5px solid var(--accent);border-radius:var(--radius);font-size:15px;font-weight:800;color:var(--accent);font-family:var(--font);outline:none;background:var(--accent-lt);text-align:center;letter-spacing:1px"
+                onfocus="this.style.borderColor='var(--ink)'" onblur="this.style.borderColor='var(--accent)'"
+              />
+            </td>
+            <td style="padding:10px 16px;border-bottom:1px solid var(--border)">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-lt);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${sess.student.name.charAt(0)}</div>
+                <span style="font-size:13px;font-weight:700;color:var(--ink)">${sess.student.name}</span>
+              </div>
+            </td>
+            <td style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink-60)">${sess.student.institution||'—'}</td>
+            <td style="padding:10px 16px;border-bottom:1px solid var(--border)">
+              <input type="text"
+                id="sched_notes_${sess.student.username}"
+                value="${(sess.extraNotes || '').replace(/"/g,'&quot;')}"
+                placeholder="הערות אופציונליות..."
+                style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:12px;font-family:var(--font);outline:none;background:white"
+                onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+              />
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+
+  // Show save bar
+  const bar = $('scheduleEditBar');
+  if (bar) bar.style.display = 'flex';
+}
+
+function enterScheduleEditMode() {
+  _scheduleEditMode = true;
+  $('btnEditSchedule').style.display = 'none';
+  _renderScheduleAllList();
+}
+
+function cancelScheduleEditMode() {
+  _exitEditModeUI(true);
+}
+
+function _exitEditModeUI(rerender) {
+  _scheduleEditMode = false;
+  const bar = $('scheduleEditBar');
+  if (bar) bar.style.display = 'none';
+  const btn = $('btnEditSchedule');
+  if (btn) btn.style.display = '';
+  if (rerender) _renderScheduleAllList();
+}
+
+async function saveAllScheduleTimes() {
+  const sessions = _getScheduleSessions();
+  if (!sessions.length) { _exitEditModeUI(true); return; }
+
+  const updates = sessions.map(sess => {
+    const timeInput  = document.getElementById(`sched_time_${sess.student.username}`);
+    const notesInput = document.getElementById(`sched_notes_${sess.student.username}`);
+    // newTime = what teacher typed in the time column (plain text, IL time as-is)
+    const newTime    = timeInput  ? timeInput.value.trim()  : (sess.time  || '');
+    // newExtra = what teacher typed in the notes column (extra info only, no time)
+    const newExtra   = notesInput ? notesInput.value.trim() : (sess.extraNotes || '');
+    // Rebuild notes: store as "HH:MM — extra" or just "HH:MM" or just extra
+    const newNotes = newTime && newExtra ? `${newTime} — ${newExtra}`
+                   : newTime             ? newTime
+                   : newExtra            ? newExtra
+                   : '';
+    return { sess, newTime, newNotes };
+  });
+
+  showLoading('שומר שעות...');
+  let saved = 0, failed = 0;
+  for (const { sess, newTime, newNotes } of updates) {
+    try {
+      const w = sess.prevWeek;
+      const res = await apiPost('saveWeekScore', {
+        username:      sess.student.username,
+        weekIdx:       sess.prevWeekIdx,
+        status:        'approved',
+        guidanceDone:  w.guidanceDone  || false,
+        weeklyWork:    w.weeklyWork    || 0,
+        portfolioScore:w.portfolioScore|| 0,
+        actualWork:    w.docScore      || 0,
+        finalScore:    w.finalScore    || 0,
+        notes:         newNotes,   // ← time lives here as plain text, no UTC conversion
+      });
+      if (res.success) saved++; else failed++;
+    } catch(e) { failed++; }
+  }
+  hideLoading();
+
+  if (failed > 0) toast(`נשמרו ${saved} / ${saved+failed} ✓`, 'warning');
+  else toast(`כל ${saved} השעות נשמרו ✓`, 'success');
+
+  _exitEditModeUI(false);
+  await loadTeacherDashboard();
+  showPage('page-t-schedule');
+  renderSchedulePage();
+}
+
+// Mark guidance as done — removes from schedule
+async function markGuidanceDone(username, weekIdx) {
+  if (!confirm('לסמן הנחיה כבוצעה? היא תוסר מהלוז.')) return;
+  showLoading('מעדכן...');
+  try {
+    const s = S.students.find(st => st.username === username);
+    const w = (s?.weeks || [])[weekIdx] || {};
+    const res = await apiPost('saveWeekScore', {
+      username, weekIdx,
+      status: 'approved',
+      guidanceDone: true,
+      weeklyWork:    w.weeklyWork    || 0,
+      portfolioScore:w.portfolioScore|| 0,
+      actualWork:    w.docScore      || 0,
+      finalScore:    w.finalScore    || 0,
+      notes:         w.notes         || '',
+    });
+    hideLoading();
+    if (res.success) {
+      toast('ההנחיה סומנה כבוצעה ✓', 'success');
+      await loadTeacherDashboard();
+      showPage('page-t-schedule');
+      renderSchedulePage();
+    } else toast('שגיאה', 'error');
+  } catch(e) { hideLoading(); toast('שגיאת תקשורת', 'error'); }
+}
+
+// Open "add guidance slot" modal — only shows approved-prev-week students
+function openAddGuidanceSlotModal() {
+  // Only students with prev week approved and not done
+  const eligible = S.students.filter(s => {
+    const weeks = s.weeks || [];
+    if (weeks.length < 2) return false;
+    const pw = weeks[weeks.length - 2];
+    return pw && pw.status === 'approved' && !pw.guidanceDone;
+  });
+
+  const sel = $('ags_student');
+  if (!eligible.length) {
+    toast('אין תלמידות מאושרות להנחיה השבוע', 'error');
+    return;
+  }
+  sel.innerHTML = eligible.map(s => `<option value="${s.username}">${s.name} (${s.institution||'—'})</option>`).join('');
+  $('ags_time').value = '';
+  $('ags_notes').value = '';
+  openModal('addGuidanceSlotModal');
+}
+
+// Save guidance time from the modal into the PREVIOUS week's notes
+async function saveGuidanceSlot() {
+  const username = $('ags_student').value;
+  const time     = $('ags_time').value.trim();
+  const notes    = $('ags_notes').value.trim();
+
+  if (!username || !time) { toast('יש לבחור תלמידה ושעה', 'error'); return; }
+
+  const s = S.students.find(st => st.username === username);
+  if (!s) return;
+  const weeks = s.weeks || [];
+  const prevWeekIdx = weeks.length - 2;
+  if (prevWeekIdx < 0) { toast('אין שבוע קודם', 'error'); return; }
+  const pw = weeks[prevWeekIdx];
+
+  // Store time as plain text inside notes (no UTC conversion)
+  const newNotes = time && notes ? `${time} — ${notes}`
+                 : time          ? time
+                 : notes         ? notes
+                 : (pw.notes || '');
+
+  showLoading('שומר...');
+  try {
+    const res = await apiPost('saveWeekScore', {
+      username, weekIdx: prevWeekIdx,
+      status:        'approved',
+      guidanceDone:  pw.guidanceDone  || false,
+      weeklyWork:    pw.weeklyWork    || 0,
+      portfolioScore:pw.portfolioScore|| 0,
+      actualWork:    pw.docScore      || 0,
+      finalScore:    pw.finalScore    || 0,
+      notes:         newNotes,
+    });
+    hideLoading();
+    if (res.success) {
+      toast('שעת ההנחיה נקבעה!', 'success');
+      closeModal('addGuidanceSlotModal');
+      await loadTeacherDashboard();
+      showPage('page-t-schedule');
+      renderSchedulePage();
+    } else toast(res.error || 'שגיאה', 'error');
+  } catch(e) { hideLoading(); toast('שגיאת תקשורת', 'error'); }
+}
+
+// ============================================================
+//  GUIDANCE DETAILS MODAL (teacher fills when approving)
 
 // ============================================================
 //  GUIDANCE DETAILS MODAL (teacher fills when approving)
@@ -4445,11 +4930,19 @@ function toggleGdmCustomMode() {
 async function saveGuidanceDetails() {
   const data = S._pendingWeekScoreSave;
   if (!data) { closeModal('guidanceDetailsModal'); return; }
-  const mode = $('gdm_mode').value;
-  data.guidanceDate  = $('gdm_date').value;
-  data.guidanceTime  = $('gdm_time').value;
-  data.guidanceMode  = mode === 'other' ? ($('gdm_custom_mode').value || 'אחר') : mode;
-  data.guidanceNotes = $('gdm_notes').value.trim();
+  const time  = $('gdm_time').value.trim();
+  const mode  = $('gdm_mode').value;
+  const modeStr = mode === 'other' ? ($('gdm_custom_mode').value || 'אחר') : { zoom:'זום', phone:'טלפון', anydesk:'אני דסק' }[mode] || mode;
+  const extra = $('gdm_notes').value.trim();
+
+  // Build notes as plain text: "12:40 — זום — קישור..."
+  const parts = [time, modeStr, extra].filter(Boolean);
+  data.notes = parts.join(' — ');
+  // Do not send guidanceTime/guidanceDate to avoid UTC conversion
+  delete data.guidanceTime;
+  delete data.guidanceDate;
+  delete data.guidanceMode;
+  delete data.guidanceNotes;
   await _doSaveWeekScore(data);
 }
 
@@ -4551,8 +5044,9 @@ function openWeekScoreModal(username, weekIdx) {
   $('ws_actual').value   = autoDoc;
   $('ws_final').value    = w.finalScore || autoFinal;
   $('ws_status').value   = w.status || 'pending';
-  $('ws_notes').value    = w.notes || '';
-  S._prevWeekStatus = w.status || 'pending'; // track for approval detection
+  // Show notes as readable text — convert ISO timestamp to "שעת הנחיה: HH:MM" if needed
+  $('ws_notes').value    = _formatNotesForDisplay(w.notes || '');
+  S._prevWeekStatus = w.status || 'pending';
   openModal('weekScoreModal');
 }
 
