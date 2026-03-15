@@ -1751,9 +1751,11 @@ tbody tr:hover td { background: var(--canvas); }
           <div class="page-header">
             <div>
               <div class="page-title">📁 תיקי פרויקט</div>
-              <div class="page-subtitle">כל ההגשות הממתינות לבדיקה</div>
+              <div class="page-subtitle">כל ההגשות — מחולק לפי שבועות</div>
             </div>
           </div>
+          <div class="inst-filter" id="portfoliosInstFilter"></div>
+          <div class="week-tabs-bar" id="portfoliosWeekTabs"></div>
           <div id="allPortfoliosList"></div>
         </div>
       </div>
@@ -1764,9 +1766,11 @@ tbody tr:hover td { background: var(--canvas); }
           <div class="page-header">
             <div>
               <div class="page-title">📝 משובים יומיים</div>
-              <div class="page-subtitle">כל המשובים הממתינים להערכה</div>
+              <div class="page-subtitle">כל המשובים — מחולק לפי שבועות</div>
             </div>
           </div>
+          <div class="inst-filter" id="feedbacksInstFilter"></div>
+          <div class="week-tabs-bar" id="feedbacksWeekTabs"></div>
           <div id="allFeedbacksList"></div>
         </div>
       </div>
@@ -1777,9 +1781,11 @@ tbody tr:hover td { background: var(--canvas); }
           <div class="page-header">
             <div>
               <div class="page-title">📋 תיעודי ביצוע</div>
-              <div class="page-subtitle">כל התיעודים הממתינים לבדיקה</div>
+              <div class="page-subtitle">כל התיעודים — מחולק לפי שבועות</div>
             </div>
           </div>
+          <div class="inst-filter" id="docsInstFilter"></div>
+          <div class="week-tabs-bar" id="docsWeekTabs"></div>
           <div id="allDocsList"></div>
         </div>
       </div>
@@ -3212,6 +3218,10 @@ async function loadTeacherDashboard() {
     hideLoading();
     if (!res.success) { toast('שגיאה', 'error'); return; }
     S.students = res.students || [];
+    // Reset week selection to latest week on fresh load
+    _viewState.portfolios.weekIdx = -1;
+    _viewState.feedbacks.weekIdx  = -1;
+    _viewState.docs.weekIdx       = -1;
     renderTeacherOverview();
     renderStudentsList();
     renderAllPortfolios();
@@ -3607,27 +3617,91 @@ function renderStudentsListFor(students) {
 }
 
 // ============================================================
-//  TEACHER QUICK ACCESS VIEWS
+//  TEACHER QUICK ACCESS VIEWS — with week tabs + institution filter
 // ============================================================
+
+// ─── shared state for each view ───
+const _viewState = {
+  portfolios: { weekIdx: -1, inst: 'הכל' },
+  feedbacks:  { weekIdx: -1, inst: 'הכל' },
+  docs:       { weekIdx: -1, inst: 'הכל' },
+};
+
+// Returns max week count across all students
+function _maxWeeks() {
+  return Math.max(...S.students.map(s => (s.weeks||[]).length), 1);
+}
+
+// Build week tabs bar for a view
+function _buildWeekTabs(containerId, viewKey, renderFn) {
+  const total = _maxWeeks();
+  const el = $(containerId);
+  if (!el) return;
+  // Clamp weekIdx
+  if (_viewState[viewKey].weekIdx === -1 || _viewState[viewKey].weekIdx >= total) {
+    _viewState[viewKey].weekIdx = total - 1;
+  }
+  const cur = _viewState[viewKey].weekIdx;
+  el.innerHTML = Array.from({ length: total }, (_, i) => {
+    const isCur = i === total - 1;
+    return `<button class="week-tab ${i === cur ? 'active' : ''}"
+      onclick="_selectViewWeek('${viewKey}',${i},'${renderFn}')"
+    >${isCur ? '★ ' : ''}שבוע ${i + 1}</button>`;
+  }).join('');
+}
+
+function _selectViewWeek(viewKey, idx, renderFn) {
+  _viewState[viewKey].weekIdx = idx;
+  window[renderFn]();
+}
+
+// Build institution filter chips for a view
+function _buildInstFilter(containerId, viewKey, renderFn) {
+  const insts = getInstitutions(); // ['הכל', ...]
+  const el = $(containerId);
+  if (!el) return;
+  el.innerHTML = insts.map(inst => `
+    <span class="inst-chip ${_viewState[viewKey].inst === inst ? 'active' : ''}"
+      onclick="_selectViewInst('${viewKey}','${inst}','${renderFn}',this)">${inst}</span>
+  `).join('');
+}
+
+function _selectViewInst(viewKey, inst, renderFn, chip) {
+  _viewState[viewKey].inst = inst;
+  document.querySelectorAll(`#${viewKey === 'portfolios' ? 'portfoliosInstFilter' : viewKey === 'feedbacks' ? 'feedbacksInstFilter' : 'docsInstFilter'} .inst-chip`)
+    .forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  window[renderFn]();
+}
+
+// Filter students by selected institution
+function _filterStudents(viewKey) {
+  const inst = _viewState[viewKey].inst;
+  return inst === 'הכל' ? S.students : S.students.filter(s => (s.institution || 'ללא מוסד') === inst);
+}
+
+// ─── PORTFOLIOS ───
 function renderAllPortfolios() {
+  _buildInstFilter('portfoliosInstFilter', 'portfolios', 'renderAllPortfolios');
+  _buildWeekTabs('portfoliosWeekTabs', 'portfolios', 'renderAllPortfolios');
+
+  const weekIdx = _viewState.portfolios.weekIdx;
+  const students = _filterStudents('portfolios');
+
   const items = [];
-  S.students.forEach(s => {
-    (s.weeks || []).forEach((w, wi) => {
-      if (w.portfolioUrl) {
-        items.push({ student: s, week: w, weekIdx: wi });
-      }
-    });
+  students.forEach(s => {
+    const w = (s.weeks || [])[weekIdx];
+    if (w && w.portfolioUrl) items.push({ student: s, week: w, weekIdx });
   });
 
-  // Split: awaiting feedback (has comment or no score) vs given feedback (has score, no comment)
-  const awaitingFb = items.filter(item => item.week.portfolioTeacherComment || !item.week.portfolioScore);
-  const givenFb    = items.filter(item => item.week.portfolioScore && !item.week.portfolioTeacherComment);
+  const awaitingFb = items.filter(item => !item.week.portfolioScore || item.week.portfolioTeacherComment);
+  const givenFb    = items.filter(item =>  item.week.portfolioScore && !item.week.portfolioTeacherComment);
 
   const renderItem = (item) => `
     <div class="card" style="${item.week.portfolioTeacherComment ? 'border-right:3px solid var(--amber)' : ''}">
       <div class="flex-between mb-8">
         <div>
-          <div class="font-bold">${item.student.name} — שבוע ${item.weekIdx+1}</div>
+          <div class="font-bold">${item.student.name}</div>
           <div class="text-muted">${item.student.institution||'—'} | ${item.student.topic||'—'}</div>
         </div>
         <div class="flex gap-8">
@@ -3643,7 +3717,7 @@ function renderAllPortfolios() {
 
   const el = $('allPortfoliosList');
   if (!items.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">📁</div><div class="empty-text">אין הגשות</div></div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📁</div><div class="empty-text">אין הגשות לשבוע זה</div></div>';
     return;
   }
   el.innerHTML = `
@@ -3654,7 +3728,7 @@ function renderAllPortfolios() {
       ${awaitingFb.map(renderItem).join('')}
     ` : ''}
     ${givenFb.length ? `
-      <div style="font-size:13px;font-weight:700;color:var(--green);margin:16px 0 10px;padding:8px 14px;background:var(--green-lt);border-radius:var(--radius)">
+      <div style="font-size:13px;font-weight:700;color:var(--green);margin:${awaitingFb.length ? '16px' : '0'} 0 10px;padding:8px 14px;background:var(--green-lt);border-radius:var(--radius)">
         ✓ ניתן משוב (${givenFb.length})
       </div>
       ${givenFb.map(renderItem).join('')}
@@ -3662,51 +3736,91 @@ function renderAllPortfolios() {
   `;
 }
 
+// ─── FEEDBACKS ───
 function renderAllFeedbacks() {
-  const items = [];
-  S.students.forEach(s => {
-    (s.weeks || []).forEach((w, wi) => {
-      DAY_KEYS.forEach(day => {
-        if (w[day] && w[day].feedback && !w[day].score) {
-          items.push({ student: s, week: w, weekIdx: wi, day });
-        }
-      });
+  _buildInstFilter('feedbacksInstFilter', 'feedbacks', 'renderAllFeedbacks');
+  _buildWeekTabs('feedbacksWeekTabs', 'feedbacks', 'renderAllFeedbacks');
+
+  const weekIdx = _viewState.feedbacks.weekIdx;
+  const students = _filterStudents('feedbacks');
+
+  const pending = [];   // no score yet
+  const graded  = [];   // has score
+
+  students.forEach(s => {
+    const w = (s.weeks || [])[weekIdx] || {};
+    DAY_KEYS.forEach(day => {
+      const fd = w[day];
+      if (!fd || !fd.feedback) return;
+      const item = { student: s, week: w, weekIdx, day, fd };
+      if (fd.score !== undefined && fd.score !== '') graded.push(item);
+      else pending.push(item);
     });
   });
-  const el = $('allFeedbacksList');
-  el.innerHTML = items.length ? items.map(item => `
+
+  const renderItem = (item) => `
     <div class="card">
       <div class="flex-between mb-8">
         <div>
-          <div class="font-bold">${item.student.name} — שבוע ${item.weekIdx+1} — ${dayName(item.day)}</div>
+          <div class="font-bold">${item.student.name} — ${dayName(item.day)}</div>
           <div class="text-muted">${item.student.institution||'—'}</div>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="openGradeModalCtx('${item.student.username}','${item.day}',${item.weekIdx})">הערכה</button>
+        <div class="flex gap-8">
+          ${item.fd.score !== undefined && item.fd.score !== ''
+            ? `<span class="badge badge-blue">${item.fd.score}/10</span>`
+            : '<span class="badge badge-amber">ממתין לציון</span>'}
+          <button class="btn btn-primary btn-sm" onclick="openGradeModalCtx('${item.student.username}','${item.day}',${item.weekIdx})">הערכה</button>
+        </div>
       </div>
-      <div class="feedback-text">${(item.week[item.day].feedback||'').replace(/\n/g,'<br>')}</div>
+      <div class="feedback-text" style="font-size:13px;color:var(--ink-60);line-height:1.6">${(item.fd.feedback||'').replace(/\n/g,'<br>')}</div>
+      ${item.fd.teacherComment ? `<div class="teacher-note mt-8">💬 ${item.fd.teacherComment}</div>` : ''}
     </div>
-  `).join('') : '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">כל המשובים הוערכו</div></div>';
+  `;
+
+  const el = $('allFeedbacksList');
+  const total = pending.length + graded.length;
+  if (!total) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">אין משובים לשבוע זה</div></div>';
+    return;
+  }
+  el.innerHTML = `
+    ${pending.length ? `
+      <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:10px;padding:8px 14px;background:var(--amber-lt);border-radius:var(--radius)">
+        ⏳ ממתינים להערכה (${pending.length})
+      </div>
+      ${pending.map(renderItem).join('')}
+    ` : ''}
+    ${graded.length ? `
+      <div style="font-size:13px;font-weight:700;color:var(--green);margin:${pending.length ? '16px' : '0'} 0 10px;padding:8px 14px;background:var(--green-lt);border-radius:var(--radius)">
+        ✓ הוערכו (${graded.length})
+      </div>
+      ${graded.map(renderItem).join('')}
+    ` : ''}
+  `;
 }
 
+// ─── DOCS ───
 function renderAllDocs() {
+  _buildInstFilter('docsInstFilter', 'docs', 'renderAllDocs');
+  _buildWeekTabs('docsWeekTabs', 'docs', 'renderAllDocs');
+
+  const weekIdx = _viewState.docs.weekIdx;
+  const students = _filterStudents('docs');
+
   const items = [];
-  S.students.forEach(s => {
-    (s.weeks || []).forEach((w, wi) => {
-      if (w.docUrl) {
-        items.push({ student: s, week: w, weekIdx: wi });
-      }
-    });
+  students.forEach(s => {
+    const w = (s.weeks || [])[weekIdx];
+    if (w && w.docUrl) items.push({ student: s, week: w, weekIdx });
   });
 
-  // Split: awaiting feedback vs given feedback
-  const awaitingFb = items.filter(item => item.week.docTeacherComment || !item.week.docScore);
-  const givenFb    = items.filter(item => item.week.docScore && !item.week.docTeacherComment);
+  const awaitingFb = items.filter(item => !item.week.docScore || item.week.docTeacherComment);
+  const givenFb    = items.filter(item =>  item.week.docScore && !item.week.docTeacherComment);
 
   const renderItem = (item) => `
     <div class="card" style="${item.week.docTeacherComment ? 'border-right:3px solid var(--amber)' : ''}">
       <div class="flex-between mb-8">
         <div>
-          <div class="font-bold">${item.student.name} — שבוע ${item.weekIdx+1}</div>
+          <div class="font-bold">${item.student.name}</div>
           <div class="text-muted">${item.student.institution||'—'}</div>
         </div>
         <div class="flex gap-8">
@@ -3721,7 +3835,7 @@ function renderAllDocs() {
 
   const el = $('allDocsList');
   if (!items.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">אין תיעודים</div></div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">אין תיעודים לשבוע זה</div></div>';
     return;
   }
   el.innerHTML = `
@@ -3732,7 +3846,7 @@ function renderAllDocs() {
       ${awaitingFb.map(renderItem).join('')}
     ` : ''}
     ${givenFb.length ? `
-      <div style="font-size:13px;font-weight:700;color:var(--green);margin:16px 0 10px;padding:8px 14px;background:var(--green-lt);border-radius:var(--radius)">
+      <div style="font-size:13px;font-weight:700;color:var(--green);margin:${awaitingFb.length ? '16px' : '0'} 0 10px;padding:8px 14px;background:var(--green-lt);border-radius:var(--radius)">
         ✓ ניתן משוב (${givenFb.length})
       </div>
       ${givenFb.map(renderItem).join('')}
