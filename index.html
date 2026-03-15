@@ -1326,7 +1326,7 @@ tbody tr:hover td { background: var(--canvas); }
           <div class="guide-step"><div class="guide-step-num">3</div><span>לחצי "שליחת משוב" — עד חצות, אחרת ציון 0</span></div>
 
           <div class="guide-section-title">תיק פרויקט — יומיים אחרי הנחיה</div>
-          <div class="guide-step"><div class="guide-step-num">1</div><span>צרי קובץ WORD/PDF ב-Google Drive ושתפי אותו (לכולם עם קישור)</span></div>
+          <div class="guide-step"><div class="guide-step-num">1</div><span>צרי קובץ WORD/PDF ב-Google Drive ושתפי אותו עם המורה בלבד</span></div>
           <div class="guide-step"><div class="guide-step-num">2</div><span>הדביקי קישור ב"תיק פרויקט" ולחצי הגשה</span></div>
           <div class="guide-step"><div class="guide-step-num">3</div><span>הפרויקט: הגדרת בעיה | רקע תאורטי | טכנולוגיות | תרשים | נספחים</span></div>
 
@@ -1519,7 +1519,7 @@ tbody tr:hover td { background: var(--canvas); }
             </div>
             <div class="flex-between mt-16">
               <span class="text-muted">⚠️ יש לשלוח עד חצות — אחרת ציון אוטומטי 0</span>
-              <button class="btn btn-primary" onclick="submitDailyFeedback()">שליחת משוב ←</button>
+              <button class="btn btn-primary" onclick="submitDailyFeedback()" title="Ctrl+Enter לשליחה מהירה">שליחת משוב ← <span style="font-size:10px;opacity:0.7">(Ctrl+↵)</span></button>
             </div>
           </div>
 
@@ -1567,8 +1567,11 @@ tbody tr:hover td { background: var(--canvas); }
               </div>
             </div>
             <div class="field mt-16">
-              <label>קישור לתיק הפרויקט (Google Drive / OneDrive — וודאי שיתוף לכולם)</label>
+              <label>קישור לתיק הפרויקט (Google Drive / OneDrive)</label>
               <input type="url" id="portfolioUrl" placeholder="https://drive.google.com/..."/>
+              <div style="margin-top:6px;padding:8px 12px;background:var(--amber-lt);border-radius:var(--radius-sm);font-size:12px;color:#B45309">
+                ⚠️ יש לשתף את הקישור עם המורה בלבד — לא לשתף עם כולם
+              </div>
             </div>
             <div class="field">
               <label>הערות</label>
@@ -1576,7 +1579,7 @@ tbody tr:hover td { background: var(--canvas); }
             </div>
             <div class="flex-between mt-8">
               <span></span>
-              <button class="btn btn-primary" onclick="submitPortfolio()">הגשת תיק פרויקט ←</button>
+              <button class="btn btn-primary" onclick="submitPortfolio()" title="Ctrl+Enter לשליחה מהירה">הגשת תיק פרויקט ← <span style="font-size:10px;opacity:0.7">(Ctrl+↵)</span></button>
             </div>
           </div>
           <div id="portfolioTeacherFeedback"></div>
@@ -1604,6 +1607,9 @@ tbody tr:hover td { background: var(--canvas); }
             <div class="field">
               <label>קישור לתיעוד (Google Drive / OneDrive)</label>
               <input type="url" id="docUrl" placeholder="https://drive.google.com/..."/>
+              <div style="margin-top:6px;padding:8px 12px;background:var(--amber-lt);border-radius:var(--radius-sm);font-size:12px;color:#B45309">
+                ⚠️ יש לשתף את הקישור עם המורה בלבד — לא לשתף עם כולם
+              </div>
             </div>
             <div class="field">
               <label>הערות</label>
@@ -1611,7 +1617,7 @@ tbody tr:hover td { background: var(--canvas); }
             </div>
             <div class="flex-between mt-8">
               <span></span>
-              <button class="btn btn-primary" onclick="submitDocumentation()">הגשת תיעוד ←</button>
+              <button class="btn btn-primary" onclick="submitDocumentation()" title="Ctrl+Enter לשליחה מהירה">הגשת תיעוד ← <span style="font-size:10px;opacity:0.7">(Ctrl+↵)</span></button>
             </div>
           </div>
           <div id="docTeacherFeedback"></div>
@@ -1946,28 +1952,24 @@ tbody tr:hover td { background: var(--canvas); }
       <button class="modal-close" onclick="closeModal('weekScoreModal')">✕</button>
     </div>
     <div style="background:var(--accent-lt);border:1px solid rgba(30,107,255,0.2);border-radius:var(--radius);padding:12px 16px;margin-bottom:20px;font-size:13px;color:var(--accent)">
-      נוסחה: 50% בחינה + 50% × (30% עבודה שבועית + 30% תיק פרויקט + 40% עבודה בפועל)
+      נוסחה: ציון שבועי = ממוצע משובים (30%) + תיק פרויקט (30%) + תיעוד (40%)
     </div>
     <div class="form-grid">
       <div class="field">
-        <label>ציון בחינה (0–100) — 50%</label>
-        <input type="number" id="ws_exam" min="0" max="100" placeholder="ציון בחינה"/>
+        <label>ציון עבודה שבועית — ממוצע משובים (אוטומטי)</label>
+        <input type="number" id="ws_weekly" min="0" max="100" placeholder="מחושב מממוצע ציוני משוב" readonly style="background:var(--canvas);color:var(--ink-60)"/>
       </div>
       <div class="field">
-        <label>עבודה שבועית (0–100) — 30%</label>
-        <input type="number" id="ws_weekly" min="0" max="100" placeholder="עבודה שבועית"/>
+        <label>ציון תיק פרויקט (אוטומטי)</label>
+        <input type="number" id="ws_portfolio" min="0" max="100" placeholder="מחושב מציון תיק הפרויקט" readonly style="background:var(--canvas);color:var(--ink-60)"/>
       </div>
       <div class="field">
-        <label>תיק פרויקט (0–100) — 30%</label>
-        <input type="number" id="ws_portfolio" min="0" max="100" placeholder="תיק פרויקט"/>
+        <label>ציון תיעוד — תיעוד ביצוע הפרויקט (אוטומטי)</label>
+        <input type="number" id="ws_actual" min="0" max="100" placeholder="מחושב מציון תיעוד הביצוע" readonly style="background:var(--canvas);color:var(--ink-60)"/>
       </div>
       <div class="field">
-        <label>עבודה בפועל (0–100) — 40%</label>
-        <input type="number" id="ws_actual" min="0" max="100" placeholder="עבודה בפועל"/>
-      </div>
-      <div class="field">
-        <label>ציון שבועי סופי (מחושב אוטומטית / ידני)</label>
-        <input type="number" id="ws_final" min="0" max="100" placeholder="ריק = חישוב אוטומטי"/>
+        <label>ציון שבועי סופי (מחושב אוטומטית)</label>
+        <input type="number" id="ws_final" min="0" max="100" placeholder="מחושב אוטומטית" readonly style="background:var(--canvas);color:var(--ink-60)"/>
       </div>
       <div class="field">
         <label>סטטוס הנחיה</label>
@@ -1977,6 +1979,8 @@ tbody tr:hover td { background: var(--canvas); }
           <option value="rejected">❌ לא מאושר</option>
         </select>
       </div>
+      <!-- Hidden exam score field (kept for API compatibility) -->
+      <input type="hidden" id="ws_exam" value="0"/>
       <div class="field form-full">
         <label>הערות כלליות לשבוע</label>
         <textarea id="ws_notes" placeholder="הערות..."></textarea>
@@ -1997,17 +2001,18 @@ tbody tr:hover td { background: var(--canvas); }
       <button class="modal-close" onclick="closeModal('pgModal')">✕</button>
     </div>
     <div id="pgm_link_area" class="mb-16"></div>
+    <div id="pgm_prev_comments"></div>
     <div class="field">
       <label>ציון (0–100)</label>
       <input type="number" id="pgm_score" min="0" max="100"/>
     </div>
     <div class="field">
-      <label>הערות</label>
+      <label>הערה חדשה (תתווסף מעל ההערה הקודמת)</label>
       <textarea id="pgm_comment" placeholder="הערות למורה..."></textarea>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('pgModal')">ביטול</button>
-      <button class="btn btn-primary" onclick="savePgGrade()">שמירה</button>
+      <button class="btn btn-primary" id="pgm_save_btn" onclick="savePgGrade()">שמירה</button>
     </div>
   </div>
 </div>
@@ -2063,6 +2068,63 @@ tbody tr:hover td { background: var(--canvas); }
       <button class="modal-close" onclick="closeModal('historyModal')">✕</button>
     </div>
     <div id="historyModalContent"></div>
+  </div>
+</div>
+
+<!-- Guidance Day Welcome Popup (student) -->
+<div class="overlay" id="guidanceDayPopup">
+  <div class="modal" style="max-width:480px;text-align:center">
+    <div style="font-size:40px;margin-bottom:12px">🎓</div>
+    <div class="modal-title" style="font-size:20px;margin-bottom:4px" id="gdp_greeting"></div>
+    <div style="font-size:13px;color:var(--ink-30);margin-bottom:24px">הנה הנתונים השבועיים שלך:</div>
+    <div class="stats-row" id="gdp_stats" style="margin-bottom:20px"></div>
+    <div id="gdp_status_area" style="padding:14px;border-radius:var(--radius);margin-bottom:20px;font-size:14px;font-weight:600"></div>
+    <div id="gdp_guidance_details" style="display:none;background:var(--accent-lt);border-radius:var(--radius);padding:14px;margin-bottom:20px;font-size:13px;text-align:right"></div>
+    <button class="btn btn-primary btn-full" onclick="closeModal('guidanceDayPopup')">הבנתי, תודה! ✓</button>
+  </div>
+</div>
+
+<!-- Guidance Details Modal (teacher sets time/mode) -->
+<div class="overlay" id="guidanceDetailsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">📅 פרטי הנחיה — <span id="gdm_student_name"></span></span>
+      <button class="modal-close" onclick="closeModal('guidanceDetailsModal')">✕</button>
+    </div>
+    <div style="background:var(--green-lt);border:1px solid rgba(0,179,122,0.2);border-radius:var(--radius);padding:12px 16px;margin-bottom:20px;font-size:13px;color:var(--green)">
+      ✅ הסטטוס שונה למאושר — הגדירי את פרטי ההנחיה
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label>תאריך הנחיה</label>
+        <input type="date" id="gdm_date"/>
+      </div>
+      <div class="field">
+        <label>שעת הנחיה</label>
+        <input type="time" id="gdm_time"/>
+      </div>
+      <div class="field form-full">
+        <label>אופן ההנחיה</label>
+        <select id="gdm_mode" onchange="toggleGdmCustomMode()">
+          <option value="zoom">זום</option>
+          <option value="phone">טלפון</option>
+          <option value="anydesk">אני דסק</option>
+          <option value="other">אחר</option>
+        </select>
+      </div>
+      <div class="field form-full" id="gdm_custom_wrap" style="display:none">
+        <label>פרט אופן הנחיה</label>
+        <input type="text" id="gdm_custom_mode" placeholder="תארי את אופן ההנחיה..."/>
+      </div>
+      <div class="field form-full">
+        <label>פרטים ומידע נוסף</label>
+        <textarea id="gdm_notes" placeholder="קישור זום, מספר טלפון, הנחיות מיוחדות..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="skipGuidanceDetails()">דלג (שמור בלי פרטים)</button>
+      <button class="btn btn-primary" onclick="saveGuidanceDetails()">שמור פרטי הנחיה ✓</button>
+    </div>
   </div>
 </div>
 
@@ -2283,7 +2345,7 @@ async function api(action, params = {}) {
 const CSRF_ACTIONS = new Set([
   'submitDailyFeedback','submitPortfolio','submitDocumentation',
   'saveGrade','saveWeekScore','savePortfolioGrade',
-  'updateGuidanceDay','saveTasks','addStudent'
+  'updateGuidanceDay','saveTasks','addStudent','autoOpenWeek'
 ]);
 
 async function fetchCsrfToken() {
@@ -2414,6 +2476,25 @@ async function resetStudentDevice(username) {
 
 $('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
+// ── Ctrl+Enter shortcuts for grade/submission forms ──
+document.addEventListener('keydown', function(e) {
+  if (!(e.ctrlKey || e.metaKey) || e.key !== 'Enter') return;
+  // Grade modal
+  if ($('gradeModal') && $('gradeModal').classList.contains('open')) { saveGrade(); return; }
+  // Portfolio/Doc grade modal
+  if ($('pgModal') && $('pgModal').classList.contains('open')) { savePgGrade(); return; }
+  // Week score modal
+  if ($('weekScoreModal') && $('weekScoreModal').classList.contains('open')) { saveWeekScore(); return; }
+  // Tasks modal
+  if ($('tasksModal') && $('tasksModal').classList.contains('open')) { saveTasks(); return; }
+  // Daily feedback (student)
+  if ($('page-daily') && $('page-daily').classList.contains('active')) { submitDailyFeedback(); return; }
+  // Portfolio submission (student)
+  if ($('page-portfolio') && $('page-portfolio').classList.contains('active')) { submitPortfolio(); return; }
+  // Doc submission (student)
+  if ($('page-doc') && $('page-doc').classList.contains('active')) { submitDocumentation(); return; }
+});
+
 // ============================================================
 //  APP INIT
 // ============================================================
@@ -2468,6 +2549,10 @@ async function loadStudentDashboard() {
     hideLoading();
     if (!res.success) { toast('שגיאה בטעינת נתונים', 'error'); return; }
     S.studentData = res.data;
+
+    // ── Auto open new week on guidance day (first login of the day) ──
+    await checkAndAutoOpenNewWeek();
+
     renderStudentDashboard();
     showPage('page-dashboard');
   } catch(e) {
@@ -2475,6 +2560,33 @@ async function loadStudentDashboard() {
     toast('שגיאת תקשורת', 'error');
     console.error(e);
   }
+}
+
+// Auto-open a new week on guidance day (first visit of the day only)
+async function checkAndAutoOpenNewWeek() {
+  try {
+    const d = S.studentData;
+    if (!d) return;
+    const todayJs = new Date().getDay(); // 0=Sun
+    const guidanceDay = parseInt(S.user.guidanceDay); // 0=Sun
+    if (todayJs !== guidanceDay) return; // not guidance day
+
+    // Check if already opened today (stored in localStorage per student)
+    const storageKey = `weekOpened_${S.user.username}_${new Date().toISOString().split('T')[0]}`;
+    if (localStorage.getItem(storageKey)) return; // already opened today
+
+    // Ask server to open new week if needed
+    const res = await apiPost('autoOpenWeek', { username: S.user.username });
+    if (res && res.success && res.opened) {
+      localStorage.setItem(storageKey, '1');
+      // Reload fresh data
+      const res2 = await api('getStudentData', { username: S.user.username });
+      if (res2.success) S.studentData = res2.data;
+    } else if (res && res.success) {
+      // Already has current week — just mark as visited
+      localStorage.setItem(storageKey, '1');
+    }
+  } catch(e) { /* silent — don't block load */ }
 }
 
 // On page visibility change (tab switch / browser return) — re-fetch fresh data once
@@ -2568,7 +2680,7 @@ function renderStudentDashboard() {
     </div>
     <div class="stat">
       <div class="stat-accent-bar" style="background:${scoreColor(execAvgPct)}"></div>
-      <div class="stat-label">ממוצע ביצוע (תיק + תיעוד)</div>
+      <div class="stat-label">ממוצע תיק + תיעוד</div>
       <div class="stat-value" style="color:${scoreColor(execAvgPct)}">${execAvgPct || '—'}</div>
       <div class="stat-change">${!bothSubmitted ? '⚠️ חייבת להגיש תיק + תיעוד' : execRemaining > 0 ? 'נדרש עוד ' + execRemaining + ' לזכאות' : '✓ עומדת בדרישה'}</div>
     </div>
@@ -2605,10 +2717,10 @@ function renderStudentDashboard() {
   $('portfolioStatusBadge').innerHTML = curWeek.portfolioUrl ? '<span class="badge badge-green">✓ הוגש</span>' : '<span class="badge badge-amber">לא הוגש</span>';
   $('portfolioTeacherFeedback').innerHTML = (curWeek.portfolioScore || curWeek.portfolioTeacherComment) ? `
     <div class="card">
-      <div class="card-title mb-8">משוב המורה</div>
+      <div class="card-title mb-8">💬 משוב המורה</div>
       <div class="teacher-note">
         ${curWeek.portfolioScore ? `<strong>ציון: ${curWeek.portfolioScore}/100</strong>&emsp;` : ''}
-        ${curWeek.portfolioTeacherComment || ''}
+        ${curWeek.portfolioTeacherComment ? `<div style="margin-top:4px;white-space:pre-line">${curWeek.portfolioTeacherComment}</div>` : ''}
       </div>
     </div>
   ` : '';
@@ -2618,10 +2730,10 @@ function renderStudentDashboard() {
   $('docStatusBadge').innerHTML = curWeek.docUrl ? '<span class="badge badge-green">✓ הוגש</span>' : '<span class="badge badge-amber">לא הוגש</span>';
   $('docTeacherFeedback').innerHTML = (curWeek.docScore || curWeek.docTeacherComment) ? `
     <div class="card">
-      <div class="card-title mb-8">משוב המורה</div>
+      <div class="card-title mb-8">💬 משוב המורה</div>
       <div class="teacher-note">
         ${curWeek.docScore ? `<strong>ציון: ${curWeek.docScore}/100</strong>&emsp;` : ''}
-        ${curWeek.docTeacherComment || ''}
+        ${curWeek.docTeacherComment ? `<div style="margin-top:4px;white-space:pre-line">${curWeek.docTeacherComment}</div>` : ''}
       </div>
     </div>
   ` : '';
@@ -2635,6 +2747,9 @@ function renderStudentDashboard() {
   todayDayEl.value = `day${todayIdx + 1}`;
   todayDayEl.disabled = true; // cannot change day
   $('dailyDate').value = new Date().toISOString().split('T')[0];
+
+  // ── Show guidance day popup on first visit of the day ──
+  checkAndShowGuidanceDayPopup(d, curWeek);
 }
 
 function toggleLocked(overlayId, locked) {
@@ -3049,6 +3164,13 @@ async function submitPortfolio() {
   const url = $('portfolioUrl').value.trim();
   const notes = $('portfolioNotes').value.trim();
   if (!url) { toast('יש להכניס קישור', 'error'); return; }
+
+  // Warn on resubmission
+  const curWeek = (S.studentData?.weeks || []).slice(-1)[0] || {};
+  if (curWeek.portfolioUrl && curWeek.portfolioUrl !== url) {
+    if (!confirm('⚠️ הגשה חדשה תחליף את ההגשה הקודמת ותעביר את התיק לסטטוס "ממתין למשוב" — האם את בטוחה?')) return;
+  }
+
   showLoading('מגיש...');
   try {
     const res = await apiPost('submitPortfolio', { username: S.user.username, portfolioUrl: url, portfolioNotes: notes });
@@ -3062,6 +3184,13 @@ async function submitDocumentation() {
   const url = $('docUrl').value.trim();
   const notes = $('docNotes').value.trim();
   if (!url) { toast('יש להכניס קישור', 'error'); return; }
+
+  // Warn on resubmission
+  const curWeek = (S.studentData?.weeks || []).slice(-1)[0] || {};
+  if (curWeek.docUrl && curWeek.docUrl !== url) {
+    if (!confirm('⚠️ הגשה חדשה תחליף את ההגשה הקודמת ותעביר את התיעוד לסטטוס "ממתין למשוב" — האם את בטוחה?')) return;
+  }
+
   showLoading('מגיש...');
   try {
     const res = await apiPost('submitDocumentation', { username: S.user.username, docUrl: url, docNotes: notes });
@@ -3487,9 +3616,13 @@ function renderAllPortfolios() {
       }
     });
   });
-  const el = $('allPortfoliosList');
-  el.innerHTML = items.length ? items.map(item => `
-    <div class="card">
+
+  // Split: awaiting feedback (has comment or no score) vs given feedback (has score, no comment)
+  const awaitingFb = items.filter(item => item.week.portfolioTeacherComment || !item.week.portfolioScore);
+  const givenFb    = items.filter(item => item.week.portfolioScore && !item.week.portfolioTeacherComment);
+
+  const renderItem = (item) => `
+    <div class="card" style="${item.week.portfolioTeacherComment ? 'border-right:3px solid var(--amber)' : ''}">
       <div class="flex-between mb-8">
         <div>
           <div class="font-bold">${item.student.name} — שבוע ${item.weekIdx+1}</div>
@@ -3502,9 +3635,29 @@ function renderAllPortfolios() {
         </div>
       </div>
       ${item.week.portfolioNotes ? `<div class="text-muted text-sm">${item.week.portfolioNotes}</div>` : ''}
-      ${item.week.portfolioTeacherComment ? `<div class="teacher-note mt-8">${item.week.portfolioTeacherComment}</div>` : ''}
+      ${item.week.portfolioTeacherComment ? `<div class="teacher-note mt-8">📌 הערה קודמת: ${item.week.portfolioTeacherComment}</div>` : ''}
     </div>
-  `).join('') : '<div class="empty"><div class="empty-icon">📁</div><div class="empty-text">אין הגשות</div></div>';
+  `;
+
+  const el = $('allPortfoliosList');
+  if (!items.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📁</div><div class="empty-text">אין הגשות</div></div>';
+    return;
+  }
+  el.innerHTML = `
+    ${awaitingFb.length ? `
+      <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:10px;padding:8px 14px;background:var(--amber-lt);border-radius:var(--radius)">
+        ⏳ ממתין למשוב (${awaitingFb.length})
+      </div>
+      ${awaitingFb.map(renderItem).join('')}
+    ` : ''}
+    ${givenFb.length ? `
+      <div style="font-size:13px;font-weight:700;color:var(--green);margin:16px 0 10px;padding:8px 14px;background:var(--green-lt);border-radius:var(--radius)">
+        ✓ ניתן משוב (${givenFb.length})
+      </div>
+      ${givenFb.map(renderItem).join('')}
+    ` : ''}
+  `;
 }
 
 function renderAllFeedbacks() {
@@ -3542,9 +3695,13 @@ function renderAllDocs() {
       }
     });
   });
-  const el = $('allDocsList');
-  el.innerHTML = items.length ? items.map(item => `
-    <div class="card">
+
+  // Split: awaiting feedback vs given feedback
+  const awaitingFb = items.filter(item => item.week.docTeacherComment || !item.week.docScore);
+  const givenFb    = items.filter(item => item.week.docScore && !item.week.docTeacherComment);
+
+  const renderItem = (item) => `
+    <div class="card" style="${item.week.docTeacherComment ? 'border-right:3px solid var(--amber)' : ''}">
       <div class="flex-between mb-8">
         <div>
           <div class="font-bold">${item.student.name} — שבוע ${item.weekIdx+1}</div>
@@ -3556,8 +3713,29 @@ function renderAllDocs() {
           <button class="btn btn-primary btn-sm" onclick="openPgModal('${item.student.username}',${item.weekIdx},'doc')">ציון</button>
         </div>
       </div>
+      ${item.week.docTeacherComment ? `<div class="teacher-note mt-8">📌 הערה קודמת: ${item.week.docTeacherComment}</div>` : ''}
     </div>
-  `).join('') : '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">אין תיעודים</div></div>';
+  `;
+
+  const el = $('allDocsList');
+  if (!items.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">אין תיעודים</div></div>';
+    return;
+  }
+  el.innerHTML = `
+    ${awaitingFb.length ? `
+      <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:10px;padding:8px 14px;background:var(--amber-lt);border-radius:var(--radius)">
+        ⏳ ממתין למשוב (${awaitingFb.length})
+      </div>
+      ${awaitingFb.map(renderItem).join('')}
+    ` : ''}
+    ${givenFb.length ? `
+      <div style="font-size:13px;font-weight:700;color:var(--green);margin:16px 0 10px;padding:8px 14px;background:var(--green-lt);border-radius:var(--radius)">
+        ✓ ניתן משוב (${givenFb.length})
+      </div>
+      ${givenFb.map(renderItem).join('')}
+    ` : ''}
+  `;
 }
 
 // ============================================================
@@ -3946,8 +4124,8 @@ function renderWeekContent(w) {
             <div class="sp-weight">30%</div>
           </div>
           <div class="score-part">
-            <div class="sp-label">ביצוע</div>
-            <div class="sp-value">${w.actualWork||'—'}</div>
+            <div class="sp-label">תיעוד</div>
+            <div class="sp-value">${w.docScore||w.actualWork||'—'}</div>
             <div class="sp-weight">40%</div>
           </div>
         </div>
@@ -4055,6 +4233,117 @@ function renderWeekContent(w) {
 }
 
 // ============================================================
+//  GUIDANCE DAY POPUP (student — first login of guidance day)
+// ============================================================
+function checkAndShowGuidanceDayPopup(d, curWeek) {
+  const todayJs = new Date().getDay();
+  const guidanceDay = parseInt(S.user.guidanceDay);
+  if (todayJs !== guidanceDay) return;
+
+  const popupKey = `gdPopup_${S.user.username}_${new Date().toISOString().split('T')[0]}`;
+  if (localStorage.getItem(popupKey)) return;
+  localStorage.setItem(popupKey, '1');
+
+  // Build data
+  const fbSum = DAY_KEYS.reduce((acc,dk) => acc + ((curWeek[dk] && curWeek[dk].score !== '' && curWeek[dk].score !== undefined) ? parseFloat(curWeek[dk].score)*10 : 0), 0);
+  const fbAvg = Math.round(fbSum / 7);
+  const portScore = parseFloat(curWeek.portfolioScore) || 0;
+  const docScore  = parseFloat(curWeek.docScore) || 0;
+  const status = curWeek.status || 'pending';
+  const isApproved = status === 'approved';
+
+  $('gdp_greeting').textContent = `שלום ${S.user.name} 👋`;
+
+  $('gdp_stats').innerHTML = `
+    <div class="stat">
+      <div class="stat-label">ממוצע משובים</div>
+      <div class="stat-value" style="color:${scoreColor(fbAvg)}">${fbAvg || '—'}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">תיק פרויקט</div>
+      <div class="stat-value" style="color:${scoreColor(portScore)}">${portScore || '—'}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">תיעוד ביצוע</div>
+      <div class="stat-value" style="color:${scoreColor(docScore)}">${docScore || '—'}</div>
+    </div>
+  `;
+
+  const statusEl = $('gdp_status_area');
+  const detailsEl = $('gdp_guidance_details');
+
+  if (isApproved) {
+    statusEl.style.background = 'var(--green-lt)';
+    statusEl.style.color = 'var(--green)';
+    statusEl.textContent = '✅ סטטוס הנחיה: מאושר!';
+
+    // Show guidance time/mode if set
+    const gDate = curWeek.guidanceDate || '';
+    const gTime = curWeek.guidanceTime || '';
+    const gMode = curWeek.guidanceMode || '';
+    const gNotes = curWeek.guidanceNotes || '';
+    const modeLabels = { zoom:'זום', phone:'טלפון', anydesk:'אני דסק', other:'אחר' };
+
+    if (gDate || gTime || gMode) {
+      detailsEl.style.display = 'block';
+      detailsEl.innerHTML = `
+        <div style="font-weight:700;margin-bottom:8px;font-size:14px">📅 פרטי ההנחיה:</div>
+        ${gDate ? `<div>📆 תאריך: <strong>${gDate}</strong></div>` : ''}
+        ${gTime ? `<div>🕐 שעה: <strong>${gTime}</strong></div>` : ''}
+        ${gMode ? `<div>💻 אופן: <strong>${modeLabels[gMode] || gMode}</strong></div>` : ''}
+        ${gNotes ? `<div style="margin-top:8px">📝 ${gNotes}</div>` : ''}
+      `;
+    }
+  } else {
+    statusEl.style.background = 'var(--amber-lt)';
+    statusEl.style.color = '#B45309';
+    statusEl.innerHTML = status === 'rejected'
+      ? '❌ סטטוס הנחיה: לא מאושר — נא להשתדל יותר לעמוד ביעדים לקראת שבוע הבא.'
+      : '⏳ סטטוס הנחיה: ממתין — נא להשתדל יותר לעמוד ביעדים לקראת שבוע הבא.';
+    detailsEl.style.display = 'none';
+  }
+
+  openModal('guidanceDayPopup');
+}
+
+// ============================================================
+//  GUIDANCE DETAILS MODAL (teacher fills when approving)
+// ============================================================
+function openGuidanceDetailsModal(username, weekIdx) {
+  const s = S.students.find(st => st.username === username) || S.currentStudent;
+  $('gdm_student_name').textContent = s ? s.name : username;
+  $('gdm_date').value = new Date().toISOString().split('T')[0];
+  $('gdm_time').value = '';
+  $('gdm_mode').value = 'zoom';
+  $('gdm_notes').value = '';
+  $('gdm_custom_mode').value = '';
+  $('gdm_custom_wrap').style.display = 'none';
+  openModal('guidanceDetailsModal');
+}
+
+function toggleGdmCustomMode() {
+  const mode = $('gdm_mode').value;
+  $('gdm_custom_wrap').style.display = mode === 'other' ? 'block' : 'none';
+}
+
+async function saveGuidanceDetails() {
+  const data = S._pendingWeekScoreSave;
+  if (!data) { closeModal('guidanceDetailsModal'); return; }
+  const mode = $('gdm_mode').value;
+  data.guidanceDate  = $('gdm_date').value;
+  data.guidanceTime  = $('gdm_time').value;
+  data.guidanceMode  = mode === 'other' ? ($('gdm_custom_mode').value || 'אחר') : mode;
+  data.guidanceNotes = $('gdm_notes').value.trim();
+  await _doSaveWeekScore(data);
+}
+
+async function skipGuidanceDetails() {
+  const data = S._pendingWeekScoreSave;
+  if (!data) { closeModal('guidanceDetailsModal'); return; }
+  await _doSaveWeekScore(data);
+}
+
+// ============================================================
 //  TEACHER MODALS
 // ============================================================
 async function saveNewStudent() {
@@ -4100,6 +4389,14 @@ async function saveGrade() {
   if (!ctx) return;
   const score = $('gm_score').value;
   const comment = $('gm_comment').value.trim();
+
+  // Warn if overwriting existing comment
+  const s = S.students.find(st => st.username === ctx.username) || S.currentStudent;
+  const existingComment = s ? (((s.weeks||[])[ctx.weekIdx]||{})[ctx.day]||{}).teacherComment : '';
+  if (existingComment && comment && comment !== existingComment) {
+    if (!confirm('⚠️ הודעה זו תמחק את ההערה הקודמת — האם את בטוחה?')) return;
+  }
+
   showLoading('שומר...');
   try {
     const res = await apiPost('saveGrade', { username:ctx.username, day:ctx.day, weekIdx:ctx.weekIdx, score, comment });
@@ -4118,40 +4415,68 @@ function openWeekScoreModal(username, weekIdx) {
   if (!s) return;
   const w = (s.weeks || [])[weekIdx] || {};
   S.wsCtx = { username, weekIdx };
-  $('ws_exam').value = w.examScore || '';
-  $('ws_weekly').value = w.weeklyWork || '';
-  $('ws_portfolio').value = w.portfolioScore || '';
-  $('ws_actual').value = w.actualWork || '';
-  $('ws_final').value = w.finalScore || '';
-  $('ws_status').value = w.status || 'pending';
-  $('ws_notes').value = w.notes || '';
+
+  // Auto-calculate: weekly work = average of daily feedback scores (0-10 → *10 → 0-100)
+  const dayScores = DAY_KEYS.map(dk =>
+    (w[dk] && w[dk].score !== '' && w[dk].score !== undefined) ? parseFloat(w[dk].score) * 10 : null
+  ).filter(v => v !== null);
+  const autoWeekly = dayScores.length
+    ? Math.round(dayScores.reduce((a,b)=>a+b,0) / dayScores.length)
+    : (parseInt(w.weeklyWork) || 0);
+
+  const autoPortfolio = parseInt(w.portfolioScore) || 0;
+  const autoDoc       = parseInt(w.docScore) || 0; // תיעוד
+
+  // Final = 30% weekly + 30% portfolio + 40% doc
+  const autoFinal = Math.round(autoWeekly * 0.3 + autoPortfolio * 0.3 + autoDoc * 0.4);
+
+  $('ws_weekly').value   = autoWeekly;
+  $('ws_portfolio').value = autoPortfolio;
+  $('ws_actual').value   = autoDoc;
+  $('ws_final').value    = w.finalScore || autoFinal;
+  $('ws_status').value   = w.status || 'pending';
+  $('ws_notes').value    = w.notes || '';
+  S._prevWeekStatus = w.status || 'pending'; // track for approval detection
   openModal('weekScoreModal');
 }
 
 async function saveWeekScore() {
   const ctx = S.wsCtx;
   if (!ctx) return;
-  const exam     = parseFloat($('ws_exam').value)    || 0;
-  const weekly   = parseFloat($('ws_weekly').value)  || 0;
-  const portfolio= parseFloat($('ws_portfolio').value)||0;
-  const actual   = parseFloat($('ws_actual').value)  || 0;
-  let final      = $('ws_final').value;
-  if (!final) {
-    const prevPart = (weekly*0.3 + portfolio*0.3 + actual*0.4) * 0.5;
-    final = Math.round(exam * 0.5 + prevPart);
-  }
+  const weekly    = parseFloat($('ws_weekly').value)   || 0;
+  const portfolio = parseFloat($('ws_portfolio').value)|| 0;
+  const doc       = parseFloat($('ws_actual').value)   || 0;
+  // Final = 30% weekly + 30% portfolio + 40% doc
+  const final = $('ws_final').value
+    ? parseFloat($('ws_final').value)
+    : Math.round(weekly * 0.3 + portfolio * 0.3 + doc * 0.4);
   const status = $('ws_status').value;
   const notes  = $('ws_notes').value.trim();
 
+  // If status just changed to 'approved', open guidance details modal
+  const prevStatus = S._prevWeekStatus || '';
+  S._pendingWeekScoreSave = { username: ctx.username, weekIdx: ctx.weekIdx, weeklyWork: weekly, portfolioScore: portfolio, docScore: doc, actualWork: doc, finalScore: final, status, notes };
+
+  if (status === 'approved' && prevStatus !== 'approved') {
+    closeModal('weekScoreModal');
+    openGuidanceDetailsModal(ctx.username, ctx.weekIdx);
+    return;
+  }
+
+  await _doSaveWeekScore(S._pendingWeekScoreSave);
+}
+
+async function _doSaveWeekScore(data) {
   showLoading('שומר ציון שבועי...');
   try {
-    const res = await apiPost('saveWeekScore', { username:ctx.username, weekIdx:ctx.weekIdx, examScore:exam, weeklyWork:weekly, portfolioScore:portfolio, actualWork:actual, finalScore:final, status, notes });
+    const res = await apiPost('saveWeekScore', data);
     hideLoading();
     if (res.success) {
       toast('הציון השבועי נשמר!', 'success');
       closeModal('weekScoreModal');
+      closeModal('guidanceDetailsModal');
       await loadTeacherDashboard();
-      if (S.currentStudent && S.currentStudent.username === ctx.username) openStudentDetail(ctx.username);
+      if (S.currentStudent && S.currentStudent.username === data.username) openStudentDetail(data.username);
     } else toast('שגיאה', 'error');
   } catch(e) { hideLoading(); toast('שגיאת תקשורת', 'error'); }
 }
@@ -4164,17 +4489,48 @@ function openPgModal(username, weekIdx, type) {
   $('pgm_title').textContent = type === 'portfolio' ? '📁 ציון תיק פרויקט' : '📋 ציון תיעוד ביצוע';
   const url = type === 'portfolio' ? w.portfolioUrl : w.docUrl;
   $('pgm_link_area').innerHTML = url ? `<a href="${url}" target="_blank" class="btn btn-ghost btn-sm mb-8">🔗 פתח הגשה</a>` : '<span class="badge badge-neutral mb-8">לא הוגש</span>';
+
+  const prevComment = type === 'portfolio' ? (w.portfolioTeacherComment||'') : (w.docTeacherComment||'');
+
+  // Show previous comments stacked above current input
+  $('pgm_prev_comments').innerHTML = prevComment
+    ? `<div style="background:var(--amber-lt);border-right:3px solid var(--amber);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px">
+        <div style="font-weight:700;color:#B45309;margin-bottom:4px">💬 הערה קודמת:</div>
+        <div style="color:var(--ink-60)">${prevComment.replace(/\n/g,'<br>')}</div>
+       </div>`
+    : '';
+
   $('pgm_score').value   = type === 'portfolio' ? (w.portfolioScore||'')  : (w.docScore||'');
-  $('pgm_comment').value = type === 'portfolio' ? (w.portfolioTeacherComment||'') : (w.docTeacherComment||'');
+  $('pgm_comment').value = '';  // clear for new comment
   openModal('pgModal');
 }
 
 async function savePgGrade() {
   const ctx = S.pgCtx;
   if (!ctx) return;
+  const newComment = $('pgm_comment').value.trim();
+  const score = $('pgm_score').value;
+
+  // Stack new comment on top of old one
+  const s = S.students.find(st => st.username === ctx.username) || S.currentStudent;
+  const w = s ? ((s.weeks || [])[ctx.weekIdx] || {}) : {};
+  const prevComment = ctx.type === 'portfolio' ? (w.portfolioTeacherComment||'') : (w.docTeacherComment||'');
+
+  let stackedComment = newComment;
+  if (newComment && prevComment) {
+    const now = new Date().toLocaleString('he-IL');
+    stackedComment = `[${now}]\n${newComment}\n\n--- הערה קודמת ---\n${prevComment}`;
+  } else if (!newComment && prevComment) {
+    stackedComment = prevComment; // preserve old comment
+  }
+
   showLoading('שומר...');
   try {
-    const res = await apiPost('savePortfolioGrade', { username:ctx.username, weekIdx:ctx.weekIdx, type:ctx.type, score:$('pgm_score').value, comment:$('pgm_comment').value.trim() });
+    const res = await apiPost('savePortfolioGrade', {
+      username: ctx.username, weekIdx: ctx.weekIdx,
+      type: ctx.type, score,
+      comment: stackedComment
+    });
     hideLoading();
     if (res.success) {
       toast('הציון נשמר!', 'success');
@@ -4218,6 +4574,13 @@ function openTasksModal() {
 async function saveTasks() {
   if (!S.currentStudent) return;
   const tasks = $('tasksInput').value.trim();
+
+  // Warn if overwriting existing tasks
+  const curTasks = (S.currentStudent.weeks || [])[S.currentWeekIdx]?.tasks || '';
+  if (curTasks && curTasks !== tasks) {
+    if (!confirm('⚠️ הודעה זו תמחק את המשימות הקודמות — האם את בטוחה?')) return;
+  }
+
   showLoading('שומר...');
   try {
     const res = await apiPost('saveTasks', { username: S.currentStudent.username, weekIdx: S.currentWeekIdx, tasks });
