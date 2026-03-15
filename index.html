@@ -2076,7 +2076,7 @@ tbody tr:hover td { background: var(--canvas); }
   <div class="modal" style="max-width:480px;text-align:center">
     <div style="font-size:40px;margin-bottom:12px">🎓</div>
     <div class="modal-title" style="font-size:20px;margin-bottom:4px" id="gdp_greeting"></div>
-    <div style="font-size:13px;color:var(--ink-30);margin-bottom:24px">הנה הנתונים השבועיים שלך:</div>
+    <div style="font-size:13px;color:var(--ink-30);margin-bottom:24px">הנה הנתונים השבועיים שלך — <strong>שבוע שעבר</strong>:</div>
     <div class="stats-row" id="gdp_stats" style="margin-bottom:20px"></div>
     <div id="gdp_status_area" style="padding:14px;border-radius:var(--radius);margin-bottom:20px;font-size:14px;font-weight:600"></div>
     <div id="gdp_guidance_details" style="display:none;background:var(--accent-lt);border-radius:var(--radius);padding:14px;margin-bottom:20px;font-size:13px;text-align:right"></div>
@@ -2749,7 +2749,9 @@ function renderStudentDashboard() {
   $('dailyDate').value = new Date().toISOString().split('T')[0];
 
   // ── Show guidance day popup on first visit of the day ──
-  checkAndShowGuidanceDayPopup(d, curWeek);
+  // Use PREVIOUS week's data — the new week just opened today
+  const prevWeek = weeks.length >= 2 ? weeks[weeks.length - 2] : curWeek;
+  checkAndShowGuidanceDayPopup(d, prevWeek);
 }
 
 function toggleLocked(overlayId, locked) {
