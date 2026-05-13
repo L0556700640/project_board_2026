@@ -1647,7 +1647,11 @@ tbody tr:hover td { background: var(--canvas); }
               <div class="page-title">סקירה כללית</div>
               <div class="page-subtitle" id="overviewDate"></div>
             </div>
-            <button class="btn btn-ghost btn-sm" onclick="loadTeacherDashboard()">↻ רענון</button>
+            <div class="flex gap-8">
+              <button class="btn btn-ghost btn-sm" onclick="loadTeacherDashboard()">↻ רענון</button>
+              <button class="btn btn-ghost btn-sm" onclick="openGradeOpenFeedbacksModal()" style="border-color:var(--accent);color:var(--accent)">📝 ציינו משובים פתוחים</button>
+              <button class="btn btn-primary btn-sm" onclick="openNewWeekModal()" style="background:linear-gradient(135deg,var(--green) 0%,#009a6a 100%);border:none">🗓️ פתיחת שבוע חדש</button>
+            </div>
           </div>
 
           <!-- Quick Access Cards -->
@@ -2209,6 +2213,121 @@ tbody tr:hover td { background: var(--canvas); }
   </div>
 </div>
 
+<!-- ============================================================
+     GRADE OPEN FEEDBACKS MODAL (no new week)
+============================================================ -->
+<div class="overlay" id="gradeOpenModal">
+  <div class="modal modal-wide" style="max-width:960px">
+    <div class="modal-header">
+      <span class="modal-title">📝 ציינו משובים פתוחים</span>
+      <button class="modal-close" onclick="closeModal('gradeOpenModal')">✕</button>
+    </div>
+
+    <!-- Step 1: institution picker -->
+    <div id="goStep1">
+      <p style="font-size:14px;color:var(--ink-60);margin-bottom:20px">בחרי מוסד (או כל המוסדות) כדי לראות את כל המשובים שטרם קיבלו ציון ולהזין ציונים.</p>
+      <div class="field">
+        <label>סינון לפי מוסד</label>
+        <select id="goInstSelect" style="font-size:15px;padding:12px 16px"></select>
+      </div>
+      <div class="modal-footer" style="border-top:none;padding-top:0;margin-top:8px">
+        <button class="btn btn-ghost" onclick="closeModal('gradeOpenModal')">ביטול</button>
+        <button class="btn btn-primary" onclick="goGoToGrading()">הצג משובים פתוחים ←</button>
+      </div>
+    </div>
+
+    <!-- Step 2: grade table -->
+    <div id="goStep2" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="goBackToStep1()">← חזרה</button>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:var(--ink)" id="goInstTitleLabel"></div>
+          <div style="font-size:12px;color:var(--ink-30)" id="goPendingCount"></div>
+        </div>
+      </div>
+
+      <div id="goPendingArea"></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('gradeOpenModal')">ביטול</button>
+        <button class="btn btn-primary" id="goSaveBtn" onclick="goSaveGrades()">💾 שמור ציונים</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     NEW WEEK MODAL — Step 1: choose institution
+============================================================ -->
+<div class="overlay" id="newWeekModal">
+  <div class="modal modal-wide" style="max-width:900px">
+    <div class="modal-header">
+      <span class="modal-title" id="newWeekModalTitle">🗓️ פתיחת שבוע חדש</span>
+      <button class="modal-close" onclick="closeModal('newWeekModal')">✕</button>
+    </div>
+
+    <!-- Step 1: institution picker -->
+    <div id="nwStep1">
+      <p style="font-size:14px;color:var(--ink-60);margin-bottom:20px">בחרי מוסד לפתיחת שבוע חדש. לפני הפתיחה תוכלי להזין ציונים לכל המשובים שעדיין לא קיבלו ציון.</p>
+      <div class="field">
+        <label>בחרי מוסד</label>
+        <select id="nwInstSelect" style="font-size:15px;padding:12px 16px"></select>
+      </div>
+      <div class="modal-footer" style="border-top:none;padding-top:0;margin-top:8px">
+        <button class="btn btn-ghost" onclick="closeModal('newWeekModal')">ביטול</button>
+        <button class="btn btn-primary" onclick="nwGoToGrading()">המשך — הצג משובים ←</button>
+      </div>
+    </div>
+
+    <!-- Step 2: grade pending feedbacks -->
+    <div id="nwStep2" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="nwBackToStep1()">← חזרה</button>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:var(--ink)" id="nwInstTitle"></div>
+          <div style="font-size:12px;color:var(--ink-30)" id="nwPendingCount"></div>
+        </div>
+      </div>
+
+      <!-- Pending feedbacks table -->
+      <div id="nwPendingArea"></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('newWeekModal')">ביטול</button>
+        <button class="btn btn-primary" onclick="nwGoToStudentSelect()">המשך — בחרי בנות לפתיחה ←</button>
+      </div>
+    </div>
+
+    <!-- Step 3: select which students open new week -->
+    <div id="nwStep3" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="nwBackToStep2()">← חזרה</button>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:var(--ink)">בחרי לאילו בנות לפתוח שבוע חדש</div>
+          <div style="font-size:12px;color:var(--ink-30)" id="nwSelectedCount"></div>
+        </div>
+        <div style="margin-right:auto;display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="nwToggleAll(true)">✓ בחר הכל</button>
+          <button class="btn btn-ghost btn-sm" onclick="nwToggleAll(false)">✕ נקה הכל</button>
+        </div>
+      </div>
+
+      <div id="nwStudentCheckboxes" style="max-height:380px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-lg);padding:8px 0"></div>
+
+      <div style="margin-top:16px;padding:14px 16px;background:var(--amber-lt);border-radius:var(--radius);border:1px solid rgba(245,158,11,0.3)">
+        <div style="font-size:12px;color:#92400E;line-height:1.7">
+          ⚠️ כל הציונים שהזנת ישמרו, ושבוע חדש ייפתח רק לבנות המסומנות. פעולה זו אינה ניתנת לביטול.
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('newWeekModal')">ביטול</button>
+        <button class="btn btn-success" id="nwOpenBtn" onclick="nwSaveAndOpenWeek()" style="background:var(--green)">✓ שמור ופתח שבוע חדש לנבחרות</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============================================================
 //  CONFIG
@@ -2430,7 +2549,8 @@ async function api(action, params = {}) {
 const CSRF_ACTIONS = new Set([
   'submitDailyFeedback','submitPortfolio','submitDocumentation',
   'saveGrade','saveWeekScore','savePortfolioGrade',
-  'updateGuidanceDay','saveTasks','addStudent','autoOpenWeek'
+  'updateGuidanceDay','saveTasks','addStudent','autoOpenWeek',
+  'saveGradeBulk'
 ]);
 
 async function fetchCsrfToken() {
@@ -5205,6 +5325,386 @@ async function saveTasks() {
 }
 
 // Close modal on overlay click
+
+// ============================================================
+//  SHARED: build pending feedbacks table HTML (used by both modals)
+// ============================================================
+function _buildPendingTableHTML(pending, prefix) {
+  if (!pending.length) {
+    return `<div class="empty" style="padding:28px 0">
+      <div class="empty-icon">✅</div>
+      <div class="empty-text">אין משובים ממתינים לציון</div>
+    </div>`;
+  }
+  return `
+    <div style="max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-lg)">
+      <table style="width:100%;border-collapse:collapse">
+        <thead style="position:sticky;top:0;z-index:2">
+          <tr style="background:var(--canvas)">
+            <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-30);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border);white-space:nowrap">שם הבת</th>
+            <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-30);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border);white-space:nowrap">יום / שבוע</th>
+            <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-30);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border)">משוב</th>
+            <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-30);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border);white-space:nowrap">ציון (0-10)</th>
+            <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-30);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border)">הערה למשוב</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${pending.map((item, idx) => `
+            <tr style="background:${idx % 2 === 0 ? 'white' : 'var(--canvas)'}">
+              <td style="padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;vertical-align:top">
+                ${item.name}
+              </td>
+              <td style="padding:11px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink-60);white-space:nowrap;vertical-align:top">
+                ${item.dayLabel}
+              </td>
+              <td style="padding:11px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink-60);max-width:260px;line-height:1.6;vertical-align:top">
+                ${(item.feedback || '').replace(/\n/g, '<br>')}
+                ${item.teacherComment ? `<div style="margin-top:4px;padding:4px 8px;background:var(--accent-lt);border-radius:var(--radius-sm);font-size:11px;color:var(--accent)">💬 ${item.teacherComment}</div>` : ''}
+              </td>
+              <td style="padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:top">
+                <input type="number"
+                  id="${prefix}_score_${idx}"
+                  data-username="${item.username}"
+                  data-weekidx="${item.weekIdx}"
+                  data-day="${item.day}"
+                  min="0" max="10" step="0.5"
+                  placeholder="—"
+                  style="width:78px;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:15px;font-weight:800;font-family:var(--font);outline:none;text-align:center;color:var(--ink)"
+                  onfocus="this.style.borderColor='var(--accent)'"
+                  onblur="this.style.borderColor='var(--border)'"
+                />
+              </td>
+              <td style="padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:top">
+                <input type="text"
+                  id="${prefix}_comment_${idx}"
+                  data-username="${item.username}"
+                  data-weekidx="${item.weekIdx}"
+                  data-day="${item.day}"
+                  placeholder="הערה אופציונלית..."
+                  style="width:100%;min-width:140px;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:12px;font-family:var(--font);outline:none;color:var(--ink)"
+                  onfocus="this.style.borderColor='var(--accent)'"
+                  onblur="this.style.borderColor='var(--border)'"
+                />
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:8px;font-size:12px;color:var(--ink-30)">
+      ניתן להשאיר שדות ריקים — ציונים ריקים לא יישמרו
+    </div>
+  `;
+}
+
+// ============================================================
+//  GRADE-ONLY MODAL (no new week opening)
+// ============================================================
+let _goInst = null;
+
+function openGradeOpenFeedbacksModal() {
+  const insts = getInstitutions().slice(1);
+  if (!insts.length) { toast('אין מוסדות במערכת', 'error'); return; }
+  const sel = $('goInstSelect');
+  sel.innerHTML = ['הכל', ...insts].map(i => `<option value="${i}">${i === 'הכל' ? 'כל המוסדות' : i}</option>`).join('');
+  _goInst = null;
+  $('goPendingArea').innerHTML = '';
+  $('goPendingCount').textContent = '';
+  $('goStep1').style.display = 'block';
+  $('goStep2').style.display = 'none';
+  openModal('gradeOpenModal');
+}
+
+function goGoToGrading() {
+  _goInst = $('goInstSelect').value;
+  const students = _goInst === 'הכל'
+    ? S.students
+    : S.students.filter(s => (s.institution || 'ללא מוסד') === _goInst);
+
+  const pending = _collectPendingFeedbacks(students);
+  $('goPendingCount').textContent = pending.length
+    ? `${pending.length} משובים ממתינים לציון`
+    : 'אין משובים פתוחים';
+  $('goInstTitleLabel').textContent = _goInst === 'הכל' ? 'כל המוסדות' : _goInst;
+  $('goPendingArea').innerHTML = _buildPendingTableHTML(pending, 'go');
+  $('goStep1').style.display = 'none';
+  $('goStep2').style.display = 'block';
+}
+
+function goBackToStep1() {
+  $('goStep1').style.display = 'block';
+  $('goStep2').style.display = 'none';
+}
+
+function _collectPendingFeedbacks(students) {
+  const pending = [];
+  students.forEach(s => {
+    const weeks = s.weeks || [];
+    weeks.forEach((w, wi) => {
+      DAY_KEYS.forEach((dk, di) => {
+        const fd = w[dk];
+        if (!fd || !fd.feedback) return;
+        if (fd.score !== undefined && fd.score !== '') return;
+        if (fd.feedback === '[אוטומטי - לא דווח]') return;
+        pending.push({
+          username: s.username,
+          name: s.name,
+          weekIdx: wi,
+          day: dk,
+          dayLabel: `שבוע ${wi + 1} — יום ${DAY_NAMES_SHORT[di]}`,
+          feedback: fd.feedback,
+          teacherComment: fd.teacherComment || '',
+        });
+      });
+    });
+  });
+  return pending;
+}
+
+async function goSaveGrades() {
+  const scoreInputs = document.querySelectorAll('[id^="go_score_"]');
+  const gradesToSave = [];
+  scoreInputs.forEach((input, idx) => {
+    const val = input.value.trim();
+    if (val === '' || isNaN(parseFloat(val))) return;
+    const commentEl = document.getElementById(`go_comment_${idx}`);
+    gradesToSave.push({
+      username: input.dataset.username,
+      weekIdx:  parseInt(input.dataset.weekidx),
+      day:      input.dataset.day,
+      score:    parseFloat(val),
+      comment:  commentEl ? commentEl.value.trim() : '',
+    });
+  });
+
+  if (!gradesToSave.length) {
+    toast('לא הוזנו ציונים לשמירה', 'error');
+    return;
+  }
+
+  const btn = $('goSaveBtn');
+  btn.disabled = true;
+  showLoading(`שומר ${gradesToSave.length} ציונים...`);
+  let saved = 0, failed = 0;
+  for (const g of gradesToSave) {
+    try {
+      const res = await apiPost('saveGrade', {
+        username: g.username,
+        day:      g.day,
+        weekIdx:  g.weekIdx,
+        score:    g.score,
+        comment:  g.comment,
+      });
+      if (res.success) saved++; else failed++;
+    } catch(e) { failed++; }
+  }
+  hideLoading();
+  btn.disabled = false;
+
+  if (failed > 0) toast(`נשמרו ${saved} ציונים, ${failed} נכשלו`, 'warning');
+  else toast(`✓ ${saved} ציונים נשמרו בהצלחה!`, 'success');
+
+  closeModal('gradeOpenModal');
+  await loadTeacherDashboard();
+}
+
+// ============================================================
+//  NEW WEEK FLOW
+// ============================================================
+let _nwInst = null; // currently selected institution
+
+function openNewWeekModal() {
+  const insts = getInstitutions().slice(1); // exclude 'הכל'
+  if (!insts.length) { toast('אין מוסדות במערכת', 'error'); return; }
+  const sel = $('nwInstSelect');
+  sel.innerHTML = insts.map(i => `<option value="${i}">${i}</option>`).join('');
+  $('nwStep1').style.display = 'block';
+  $('nwStep2').style.display = 'none';
+  $('nwStep3').style.display = 'none';
+  _nwInst = null;
+  openModal('newWeekModal');
+}
+
+function nwBackToStep2() {
+  $('nwStep2').style.display = 'block';
+  $('nwStep3').style.display = 'none';
+}
+
+function nwGoToStudentSelect() {
+  const students = S.students.filter(s => (s.institution || 'ללא מוסד') === _nwInst);
+  const container = $('nwStudentCheckboxes');
+
+  container.innerHTML = students.map(s => `
+    <label style="display:flex;align-items:center;gap:12px;padding:12px 18px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .12s"
+      onmouseover="this.style.background='var(--canvas)'" onmouseout="this.style.background=''">
+      <input type="checkbox" id="nw_sel_${s.username}" data-username="${s.username}" checked
+        onchange="nwUpdateSelectedCount()"
+        style="width:18px;height:18px;accent-color:var(--green);cursor:pointer;flex-shrink:0"/>
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--ink)">${s.name}</div>
+        <div style="font-size:11px;color:var(--ink-30)">שבוע ${(s.weeks||[]).length} נוכחי</div>
+      </div>
+    </label>
+  `).join('');
+
+  nwUpdateSelectedCount();
+  $('nwStep2').style.display = 'none';
+  $('nwStep3').style.display = 'block';
+}
+
+function nwUpdateSelectedCount() {
+  const all   = document.querySelectorAll('[id^="nw_sel_"]');
+  const checked = [...all].filter(cb => cb.checked).length;
+  $('nwSelectedCount').textContent = `${checked} מתוך ${all.length} בנות נבחרו`;
+}
+
+function nwToggleAll(state) {
+  document.querySelectorAll('[id^="nw_sel_"]').forEach(cb => cb.checked = state);
+  nwUpdateSelectedCount();
+}
+
+
+function nwBackToStep1() {
+  $('nwStep1').style.display = 'block';
+  $('nwStep2').style.display = 'none';
+  $('nwStep3').style.display = 'none';
+}
+
+function nwGoToGrading() {
+  _nwInst = $('nwInstSelect').value;
+  if (!_nwInst) { toast('יש לבחור מוסד', 'error'); return; }
+  $('nwInstTitle').textContent = `מוסד: ${_nwInst}`;
+  $('newWeekModalTitle').textContent = `🗓️ פתיחת שבוע חדש — ${_nwInst}`;
+  _nwBuildPendingTable(_nwInst);
+  $('nwStep1').style.display = 'none';
+  $('nwStep2').style.display = 'block';
+}
+
+function _nwBuildPendingTable(inst) {
+  const students = S.students.filter(s => (s.institution || 'ללא מוסד') === inst);
+  const pending = _collectPendingFeedbacks(students);
+
+  $('nwPendingCount').textContent = pending.length
+    ? `${pending.length} משובים ממתינים לציון`
+    : 'אין משובים ממתינים לציון — ניתן לפתוח שבוע חדש ישירות';
+
+  const area = $('nwPendingArea');
+
+  if (!pending.length) {
+    area.innerHTML = `
+      <div class="empty" style="padding:28px 0">
+        <div class="empty-icon">✅</div>
+        <div class="empty-text">כל המשובים במוסד זה קיבלו ציון</div>
+      </div>`;
+    return;
+  }
+
+  area.innerHTML = _buildPendingTableHTML(pending, 'nw');
+}
+
+async function nwSaveAndOpenWeek() {
+  if (!_nwInst) return;
+
+  const btn = $('nwOpenBtn');
+  btn.disabled = true;
+
+  // Collect all score inputs (with matching comment inputs)
+  const scoreInputs = document.querySelectorAll('[id^="nw_score_"]');
+  const gradesToSave = [];
+  scoreInputs.forEach((input, idx) => {
+    const val = input.value.trim();
+    if (val === '' || isNaN(parseFloat(val))) return;
+    const commentEl = document.getElementById(`nw_comment_${idx}`);
+    gradesToSave.push({
+      username: input.dataset.username,
+      weekIdx:  parseInt(input.dataset.weekidx),
+      day:      input.dataset.day,
+      score:    parseFloat(val),
+      comment:  commentEl ? commentEl.value.trim() : '',
+    });
+  });
+
+  // Save grades one by one
+  if (gradesToSave.length) {
+    showLoading(`שומר ${gradesToSave.length} ציונים...`);
+    let saved = 0, failed = 0;
+    for (const g of gradesToSave) {
+      try {
+        const res = await apiPost('saveGrade', {
+          username: g.username,
+          day:      g.day,
+          weekIdx:  g.weekIdx,
+          score:    g.score,
+          comment:  g.comment,
+        });
+        if (res.success) saved++; else failed++;
+      } catch(e) { failed++; }
+    }
+    if (failed > 0) {
+      hideLoading();
+      toast(`נשמרו ${saved} ציונים, ${failed} נכשלו`, 'warning');
+    }
+  }
+
+  // Open new week only for selected (checked) students
+  const checkedBoxes = [...document.querySelectorAll('[id^="nw_sel_"]:checked')];
+  const selectedUsernames = new Set(checkedBoxes.map(cb => cb.dataset.username));
+
+  if (!selectedUsernames.size) {
+    toast('לא נבחרה אף בת לפתיחת שבוע חדש', 'error');
+    btn.disabled = false;
+    return;
+  }
+
+  const students = S.students.filter(s =>
+    (s.institution || 'ללא מוסד') === _nwInst && selectedUsernames.has(s.username)
+  );
+  showLoading(`פותח שבוע חדש ל-${students.length} בנות...`);
+  let opened = 0, openFailed = 0;
+  for (const s of students) {
+    try {
+      const weeks = s.weeks || [];
+      const lastWeekIdx = weeks.length - 1;
+      if (lastWeekIdx < 0) continue;
+      const w = weeks[lastWeekIdx] || {};
+
+      // Calculate scores same way as saveWeekScore modal
+      const dayScores = DAY_KEYS.map(dk =>
+        (w[dk] && w[dk].score !== '' && w[dk].score !== undefined) ? parseFloat(w[dk].score) * 10 : null
+      ).filter(v => v !== null);
+      const weeklyWork    = dayScores.length ? Math.round(dayScores.reduce((a,b)=>a+b,0)/dayScores.length) : (parseInt(w.weeklyWork)||0);
+      const portfolioScore = parseInt(w.portfolioScore) || 0;
+      const docScore       = parseInt(w.docScore)       || 0;
+      const finalScore     = w.finalScore
+        ? parseInt(w.finalScore)
+        : Math.round(weeklyWork * 0.3 + portfolioScore * 0.3 + docScore * 0.4);
+
+      const res = await apiPost('saveWeekScore', {
+        username:       s.username,
+        weekIdx:        lastWeekIdx,
+        weeklyWork,
+        portfolioScore,
+        docScore,
+        actualWork:     docScore,
+        finalScore,
+        status:         'approved',
+        notes:          w.notes || '',
+      });
+      if (res.success) opened++; else openFailed++;
+    } catch(e) { openFailed++; }
+  }
+  hideLoading();
+
+  if (openFailed > 0) {
+    toast(`נפתח שבוע חדש ל-${opened} בנות, ${openFailed} נכשלו`, 'warning');
+  } else {
+    toast(`✓ שבוע חדש נפתח ל-${opened} בנות במוסד ${_nwInst}!`, 'success');
+  }
+
+  closeModal('newWeekModal');
+  btn.disabled = false;
+  await loadTeacherDashboard();
+}
 
 // ============================================================
 //  SECURITY: DevTools Detection + Periodic Server Role Check
